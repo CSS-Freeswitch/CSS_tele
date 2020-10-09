@@ -1388,23 +1388,47 @@ SWITCH_STANDARD_APP(set_name_function)
 	}
 }
 
+/**
+ * anno@suy:2020-10-8 #20.1.2.1
+ * 
+ * 摘自《FreeSWITCH权威指南》：
+ * 
+ * 我们用同样的方法可以找到answer_function，代码也不算长，因此我们也把它全部贴在这里
+ */
 SWITCH_STANDARD_APP(answer_function)
 {
-	switch_channel_t *channel = switch_core_session_get_channel(session);
+	switch_channel_t *channel = switch_core_session_get_channel(session);	//$1
 	const char *arg = (char *) data;
 
-	if (zstr(arg)) {
+	if (zstr(arg)) {														//$2
 		arg = switch_channel_get_variable(channel, "answer_flags");
 	}
 
 	if (!zstr(arg)) {
-		if (switch_stristr("is_conference", arg)) {
+		if (switch_stristr("is_conference", arg)) {							//$3
 			switch_channel_set_flag(channel, CF_CONFERENCE);
 		}
 	}
 
-	switch_channel_answer(channel);
+	switch_channel_answer(channel);											//$4
 }
+/**
+ * 跟echo_function类似，该函数也是使用SWITCH_STANDARD_APP定义的。我们知道，一个Session对应一个Channel。通过
+ * switch_core_session_get_channel函数便可以找到当前与Session对应的Channel（第$1行）。
+ * 
+ * 上面代码定义了一个arg指针，它指向answer的参数data。如果arg（即传过来的data）为空字符串（第$2行，zstr函数用于判断空
+ * 字符串），则尝试检查一下该Channel上有没有answer_flags这个通道变量，如果有（第$3行，其中switch_strstr类似于标准的
+ * strstr，不区分大小写），则判断改参数中是否包含"is_conference"，如果包含，则在该Channel上设置一个CF_CONFERENCE标志
+ * （该标志主要用于RFC4575/RFC4579描述的会议系统）。
+ * 
+ * 最后，在第$4行调用核心的函数switch_channel_answer来对该Channel进行应答。
+ * 
+ * switch_channel_answer函数实际上是一个宏，在此使用一个宏的作用就是往函数中传入调用者的源文件名和行号信息，以便在日志
+ * 中打印的文件名和行号是实际上调用该函数处的文件名和行号，而不是该函数实际定义处的行号（否则没有什么实际意义）。该宏展开
+ * 后实际是调用switch_channal.c中的switch_channel_perform_answer函数。#->20.1.2.2
+ * 
+ * anno@suy end
+ */
 
 SWITCH_STANDARD_APP(wait_for_answer_function)
 {
@@ -1630,6 +1654,16 @@ SWITCH_STANDARD_APP(sched_cancel_function)
 	}
 }
 
+/**
+ * anno@suy:2020-10-8 #20.1.3.2
+ * 
+ * 摘自《FreeSWITCH权威指南》：
+ * 
+ * base_set其实会被多个函数调用，在此我们只关心它被set_function调用的情况。为了更直观，我们通过实际的例子来说明。假设我们在
+ * Dialplan中使用如下配置：
+ *     <action application="set" data="dialed_extension=$1"/>
+ * 其中，$1为前面的正则表达式的匹配结果，它是一个变量（我们假设它的值为1001）：
+ */
 static void base_set (switch_core_session_t *session, const char *data, switch_stack_t stack)
 {
 	char *var, *val = NULL;
@@ -1652,33 +1686,61 @@ static void base_set (switch_core_session_t *session, const char *data, switch_s
 		switch_channel_t *channel = switch_core_session_get_channel(session);
 		char *expanded = NULL;
 
+		/*->
+		 * 下面会通过switch_core_session_strdup将字符串复制一份。该函数是在session上进行操作的，它会使用该session的内存池
+		 * 申请字符串空间，因而申请以后的内存无需明确释放。为什么要重新复制一份字符串呢？是因为我们接下来的操作会修改该字符串
+		 * 的内存（如第$1行），因而复制一份可避免破坏原来的字符串所占的内存空间。到此，我们的var变量的值就是
+		 * "dialed_extension=$1"了。
+		 */ 
 		var = switch_core_session_strdup(session, data);
 
+		/*->
+		 * 接下来，判断字符串是否包含等号，在我们的例子里有等号，因此val指向等号所在的内存位置，也可以说val指针所在的字符串值
+		 * 为"=$1"。
+		 */
 		if (!(val = strchr(var, '='))) {
 			val = strchr(var, ',');
 		}
 
+		/*->
+		 * 如果val非空（第1391行），则在下面第二行将val所指的位置写入"\0"（即C语言中的字符串结束符），并将val指针向后移动一个
+		 * 字节，此时它的值就是"$1"了。同时，由于我们将原字符串中的等号改成了"\0"，因此var所指向的字符串的值也相当于变短了，此
+		 * 时var的值为"dialed_extension"。
+		 */
 		if (val) {
-			*val++ = '\0';
+			*val++ = '\0';					//$1
 			if (zstr(val)) {
 				val = NULL;
 			}
 		}
 
+		/*->
+		 * 下面继续判断如果val为非空（因为已经移动了指针，所以要重新判断），则执行下面第二行的函数，就是将val指针中的$1变量替换
+		 * 为它的实际的值。在这里，我们将在expanded变量中得到实际的值是"1001"。
+		 */
 		if (val) {
-			expanded = switch_channel_expand_variables(channel, val);
+			expanded = switch_channel_expand_variables(channel, val);	//$2
 		}
 
 		switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_DEBUG, "%s %s [%s]=[%s]\n",
 						  what, switch_channel_get_name(channel), var, expanded ? expanded : "UNDEF");
 
+		//-> 调用函数在Channel上设置我们指定的新变量
 		switch_channel_add_variable_var_check(channel, var, expanded, SWITCH_FALSE, stack);
+		//-> 等价于switch_channel_add_variable_var_check(channel, "dialed_extension", "1001", SWITCH_FALSE, stack);
 
+		//-> 当然，最后不要忘记，expanded指针所指向的内存是动态申请的，因此一定要释放内存，以避免引起内存泄漏
 		if (expanded && expanded != val) {
 			switch_safe_free(expanded);
 		}
 	}
 }
+/**
+ * 虽然这里们讲的比较啰嗦，但实际的过程还是非常简单的。我们接着看一看第$2行调用的switch_channel_expand_variables函数到底都干了
+ * 些什么 #->20.1.3.3
+ * 
+ * anno@suy end
+ */
 
 SWITCH_STANDARD_APP(multiset_function)
 {
@@ -1707,10 +1769,19 @@ SWITCH_STANDARD_APP(multiset_function)
 	}
 }
 
+/**
+ * anno@suy:2020-10-8 #20.1.3.1
+ * 
+ * 摘自《FreeSWITCH权威指南》：
+ * 
+ * FreeSWITCH中大量使用通道变量控制通话（Channel）的行为。设置通道变量的操作是由下面的set APP实现的。该函数出奇的简单，
+ * 因为它直接调用了另外一个函数base_set。#->20.1.3.2
+ */
 SWITCH_STANDARD_APP(set_function)
 {
 	base_set(session, data, SWITCH_STACK_BOTTOM);
 }
+/*anno@suy end*/
 
 SWITCH_STANDARD_APP(push_function)
 {
@@ -2316,10 +2387,43 @@ SWITCH_STANDARD_APP(stop_fax_detect_session_function)
 	switch_ivr_stop_tone_detect_session(session);
 }
 
+/**
+ * anno@suy:2020-10-8 #20.1.1.1
+ * 
+ * 摘自《FreeSWITCH权威指南》：
+ * 
+ * 我们先来找echo。通过使用权威搜索工具搜索代码，我们很快就在mod_dptools.c中找到了一个函数定义————echo_function，
+ * 它的代码只有下面短短的三行
+ */
 SWITCH_STANDARD_APP(echo_function)
 {
 	switch_ivr_session_echo(session, NULL);
 }
+/**
+ * 从上述代码中可以看出，echo_function这个函数使用SWITCH_STANDARD_APP宏来定义的。接着跟踪这个宏定义，发现它是在
+ * switch_types.h中定义的
+ * 
+ * #define SWITCH_STANDARD_APP(name) static void name (switch_core_session_t *session, const char *data)
+ * 
+ * 因此，如果将上面的宏展开，那么echo_function的定义就是：
+ * 
+ * static void echo_function (switch_core_session_t *session, const char *data) {
+ *     switch_ivr_session_echo(session, NULL);
+ * }
+ * 
+ * 我们已经知道，每一路通话（一条腿）均有一个Session（即这里的session变量）每个App都是跟Session相关的，因而
+ * FreeSWITCH在调用每个App时，均会把当前的Session作为参数传入（一个session指针）。由于echo App没有参数，因而
+ * 这里的data就是空字符串。当然，如果你在Dialplan中传入参数，如进行如下操作：
+ *     <application action="echo" data="some data"/>
+ * 那么，这里的char *data的值就是some data，只不过我们在此并不需要用到该参数，因而直接被忽略掉了。
+ * 
+ * echo-function函数就直接调用核心提供的switch_ivr_session_echo函数，将收到的RTP包原样发回去。
+ * switch_ivr_session_echo函数我们在20.3.7节已经详细介绍了，这里就不重复了。
+ * 
+ * 至此，是不是觉得整个呼叫流程一下子就串起来了？当然，如果还是没有这种感觉，我们继续往下看。#->20.1.1.2
+ * 
+ * anno@suy end
+ */
 
 SWITCH_STANDARD_APP(park_function)
 {
@@ -6597,7 +6701,19 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_dptools_load)
 	SWITCH_ADD_APP(app_interface, "stop_tone_detect", "stop detecting tones", "Stop detecting tones", stop_fax_detect_session_function, "", SAF_NONE);
 	SWITCH_ADD_APP(app_interface, "fax_detect", "Detect faxes", "Detect fax send tone", fax_detect_session_function, "", SAF_MEDIA_TAP);
 	SWITCH_ADD_APP(app_interface, "tone_detect", "Detect tones", "Detect tones", tone_detect_session_function, "", SAF_MEDIA_TAP);
+	/**
+	 * anno@suy:2020-10-8 #20.1.1.2
+	 * 
+	 * 摘自《FreeSWITCH权威指南》：
+	 * 
+	 * 继续在本文件中找echo_function，我们会发现下面一行
+	 */
 	SWITCH_ADD_APP(app_interface, "echo", "Echo", "Perform an echo test against the calling channel", echo_function, "", SAF_SUPPORT_TEXT_ONLY);
+	/**
+	 * 它的作用是将我们刚刚定义的echo_function加到app_interface里（即核心的Application Interface指针）。#->20.1.1.3
+	 * 
+	 * anno@suy end
+	 */
 	SWITCH_ADD_APP(app_interface, "park", "Park", "Park", park_function, "", SAF_SUPPORT_NOMEDIA);
 	SWITCH_ADD_APP(app_interface, "park_state", "Park State", "Park State", park_state_function, "", SAF_NONE);
 	SWITCH_ADD_APP(app_interface, "gentones", "Generate Tones", "Generate tones to the channel", gentones_function, "<tgml_script>[|<loops>]", SAF_NONE);

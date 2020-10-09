@@ -1492,6 +1492,11 @@ SWITCH_DECLARE(switch_status_t) switch_channel_set_variable_var_check(switch_cha
 }
 
 
+/**
+ * anno@suy:2020-10-8 #20.1.3.3
+ * 
+ * 摘自《FreeSWITCH权威指南》：
+ */
 SWITCH_DECLARE(switch_status_t) switch_channel_add_variable_var_check(switch_channel_t *channel,
 																	  const char *varname, const char *value, switch_bool_t var_check, switch_stack_t stack)
 {
@@ -1499,6 +1504,7 @@ SWITCH_DECLARE(switch_status_t) switch_channel_add_variable_var_check(switch_cha
 
 	switch_assert(channel != NULL);
 
+	//-> 首先对临界区加锁，以防止其他并发的线程同时修改。然后经过一系列的判断和检查
 	switch_mutex_lock(channel->profile_mutex);
 	if (channel->variables && !zstr(varname)) {
 		if (zstr(value)) {
@@ -1509,6 +1515,12 @@ SWITCH_DECLARE(switch_status_t) switch_channel_add_variable_var_check(switch_cha
 			if (var_check) {
 				ok = !switch_string_var_check_const(value);
 			}
+			/*->
+			 * 如果最终所有检查都通过，则在下面第二行调用switch_event_add_header_string函数将通道变量添加到channel->variables中去。
+			 * 该函数与我们在18.3.1节中讲过的esl_event_add_header_string类似，它实际上是向一个switch_event_t类型的结构体中添加数据，
+			 * 所以这里可以看到，channel->variables是在内部使用switch_event_t来存储的。这也不奇怪，因为通道变量本来就是一对“键/值”对
+			 * （varname和value）。
+			 */
 			if (ok) {
 				switch_event_add_header_string(channel->variables, stack, varname, value);
 			} else {
@@ -1517,10 +1529,16 @@ SWITCH_DECLARE(switch_status_t) switch_channel_add_variable_var_check(switch_cha
 		}
 		status = SWITCH_STATUS_SUCCESS;
 	}
+	//-> 当然，永远不要忘了释放锁。
 	switch_mutex_unlock(channel->profile_mutex);
 
 	return status;
 }
+/**
+ * 至此，set函数就全部剖析完了。通过它设置的通道变量，以后也可以通过switch_channel_get_variable再取出来。当然，这就是另外的事情了
+ * 
+ * anno@suy end
+ */
 
 
 switch_status_t switch_event_base_add_header(switch_event_t *event, switch_stack_t stack, const char *header_name, char *data);
@@ -3875,8 +3893,14 @@ SWITCH_DECLARE(switch_status_t) switch_channel_perform_mark_answered(switch_chan
 	return SWITCH_STATUS_SUCCESS;
 }
 
+/**
+ * anno@suy:2020-10-8 #20.1.2.2
+ * 
+ * 摘自《FreeSWITCH权威指南》：
+ */
 SWITCH_DECLARE(switch_status_t) switch_channel_perform_answer(switch_channel_t *channel, const char *file, const char *func, int line)
 {
+	//-> 在该函数中，它首先初始化一个msg变量，该变量是switch_core_session_message_t类型的，用语定义一条消息（Message）。
 	switch_core_session_message_t msg = { 0 };
 	switch_status_t status = SWITCH_STATUS_SUCCESS;
 
@@ -3894,13 +3918,23 @@ SWITCH_DECLARE(switch_status_t) switch_channel_perform_answer(switch_channel_t *
 		return SWITCH_STATUS_SUCCESS;
 	}
 
+	/*-> 
+	 * 然后，下面两行初始化消息的内容，并于下面第三行将消息发送出去，消息（Message）是与Core Event类似的另外一种消息传递
+	 * （调用）方式，与Core Event不同的是，消息的发送总是同步进行的，因此这里的perform_receive_message实际上是直接调用
+	 * 各模块中接受消息的回调函数，我们在21.1.3节还会讲到。
+	 */
 	msg.message_id = SWITCH_MESSAGE_INDICATE_ANSWER;
 	msg.from = channel->name;
 	status = switch_core_session_perform_receive_message(channel->session, &msg, file, func, line);
 
-
+	
 	if (status == SWITCH_STATUS_SUCCESS) {
+		//-> 如果消息发送成功，就将该Channel的状态置为已应答的状态
 		switch_channel_perform_mark_answered(channel, file, func, line);
+		/*->
+		 * 实际上，如果这里的Channel是一个SIP通话的话，FreeSWITCH中的mod_sofia Endpoint模块便会调用底层的Sofia-SIP协议栈
+		 * （libsofia）给对方发送"200 OK"的SIP消息
+		 */
 		if (!switch_channel_test_flag(channel, CF_EARLY_MEDIA)) {
 			switch_channel_audio_sync(channel);
 		}
@@ -3925,6 +3959,11 @@ SWITCH_DECLARE(switch_status_t) switch_channel_perform_answer(switch_channel_t *
 
 	return status;
 }
+/**
+ * answer_function也是由SWITCH_ADD_APP宏安装到核心中去的。#->20.1.3.1
+ * 
+ * anno@suy end
+ */
 
 #define resize(l) {\
 	char *dp;\

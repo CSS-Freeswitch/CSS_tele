@@ -474,21 +474,37 @@ SWITCH_STANDARD_API(mod_signalwire_api_function)
 
     if ((argc = switch_separate_string(buf, ' ', argv, (sizeof(argv) / sizeof(argv[0]))))) {
 		if (!strcmp(argv[0], "token")) {
+
+			/*delete@suy:2020-9-26*/
+			/*<anno@suy:2020-9-26> 去掉了signalwire的logo以及网站信息*/
+
+			// if (globals.adoption_token[0]) {
+			// 	stream->write_function(stream,
+			// 		"     _____ _                   ___       ___\n"
+			// 		"    / ___/(_)___ _____  ____ _/ / |     / (_)_______\n"
+			// 		"    \\__ \\/ / __ `/ __ \\/ __ `/ /| | /| / / / ___/ _ \\\n"
+			// 		"   ___/ / / /_/ / / / / /_/ / / | |/ |/ / / /  /  __/\n"
+			// 		"  /____/_/\\__, /_/ /_/\\__,_/_/  |__/|__/_/_/   \\___/\n"
+			// 		"         /____/\n"
+			// 		"\n /=====================================================================\\\n"
+			// 		"  Connection Token: %s\n"
+			// 		" \\=====================================================================/\n"
+			// 		" Go to https://signalwire.com to set up your Connector now!\n", globals.adoption_token);
+			// } else {
+			// 	stream->write_function(stream, "-ERR connection token not available\n");
+			// }
+
+			/*<anno@suy end>*/
+			/*delete@suy end*/
+
+			/*create@suy:2020-9-26*/
 			if (globals.adoption_token[0]) {
-				stream->write_function(stream,
-					"     _____ _                   ___       ___\n"
-					"    / ___/(_)___ _____  ____ _/ / |     / (_)_______\n"
-					"    \\__ \\/ / __ `/ __ \\/ __ `/ /| | /| / / / ___/ _ \\\n"
-					"   ___/ / / /_/ / / / / /_/ / / | |/ |/ / / /  /  __/\n"
-					"  /____/_/\\__, /_/ /_/\\__,_/_/  |__/|__/_/_/   \\___/\n"
-					"         /____/\n"
-					"\n /=====================================================================\\\n"
-					"  Connection Token: %s\n"
-					" \\=====================================================================/\n"
-					" Go to https://signalwire.com to set up your Connector now!\n", globals.adoption_token);
+				stream->write_function(stream, "");
 			} else {
 				stream->write_function(stream, "-ERR connection token not available\n");
 			}
+			/*create@suy end*/
+
 			goto done;
 		}
 		else if (!strcmp(argv[0], "adoption")) {
@@ -964,14 +980,20 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_signalwire_load)
 
 	// @todo register nodestore callbacks here if needed
 
-	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CONSOLE, "Welcome to\n"
-	"     _____ _                   ___       ___\n"
-	"    / ___/(_)___ _____  ____ _/ / |     / (_)_______\n"
-	"    \\__ \\/ / __ `/ __ \\/ __ `/ /| | /| / / / ___/ _ \\\n"
-	"   ___/ / / /_/ / / / / /_/ / / | |/ |/ / / /  /  __/\n"
-	"  /____/_/\\__, /_/ /_/\\__,_/_/  |__/|__/_/_/   \\___/\n"
-	"         /____/\n");
+	/*delete@suy:2020-9-26*/
+	/*<anno@suy:2020-9-26> 去掉了freeswitch的启动logo*/
 
+	// switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CONSOLE, "Welcome to\n"
+	// "     _____ _                   ___       ___\n"
+	// "    / ___/(_)___ _____  ____ _/ / |     / (_)_______\n"
+	// "    \\__ \\/ / __ `/ __ \\/ __ `/ /| | /| / / / ___/ _ \\\n"
+	// "   ___/ / / /_/ / / / / /_/ / / | |/ |/ / / /  /  __/\n"
+	// "  /____/_/\\__, /_/ /_/\\__,_/_/  |__/|__/_/_/   \\___/\n"
+	// "         /____/\n");
+
+	/*<anno@suy end>*/
+	/*delete@suy end*/
+	
 	// storage_dir was missing in clean install
 	switch_dir_make_recursive(SWITCH_GLOBAL_dirs.storage_dir, SWITCH_DEFAULT_DIR_PERMS, pool);
 

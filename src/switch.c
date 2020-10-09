@@ -517,7 +517,17 @@ int main(int argc, char *argv[])
 #if (defined(__SVR4) && defined(__sun))
 	switch_core_flag_t flags = SCF_USE_SQL | SCF_CALIBRATE_CLOCK | SCF_USE_CLOCK_RT;
 #else
-	switch_core_flag_t flags = SCF_USE_SQL | SCF_USE_AUTO_NAT | SCF_USE_NAT_MAPPING | SCF_CALIBRATE_CLOCK | SCF_USE_CLOCK_RT;
+
+	/*delete@suy:2020-9-29*/
+	/*<anno@suy:2020-9-29> 去掉自动开启NAT功能*/
+	// switch_core_flag_t flags = SCF_USE_SQL | SCF_USE_AUTO_NAT | SCF_USE_NAT_MAPPING | SCF_CALIBRATE_CLOCK | SCF_USE_CLOCK_RT;
+	/*<anno@suy end>*/
+	/*delete@suy end*/
+
+	/*create@suy:2020-9-29*/
+	switch_core_flag_t flags = SCF_USE_SQL | SCF_USE_NAT_MAPPING | SCF_CALIBRATE_CLOCK | SCF_USE_CLOCK_RT;
+	/*create@suy end*/
+
 #endif
 	int ret = 0;
 	switch_status_t destroy_status;

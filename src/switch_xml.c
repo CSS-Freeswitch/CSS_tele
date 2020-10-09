@@ -261,6 +261,10 @@ static struct xml_section_t SECTIONS[] = {
 	{NULL, 0}
 };
 
+/**
+ * 查找字符串中是否含有"result"、"config"等字符串(具体参见SECTIONS[]数组)，不区分大小写，如果包含
+ * 指定字符串，则将sections中对应的位置位，返回此sections
+ */
 SWITCH_DECLARE(switch_xml_section_t) switch_xml_parse_section_string(const char *str)
 {
 	size_t x;

@@ -110,6 +110,11 @@ static switch_queue_t *EVENT_HEADER_RECYCLE_QUEUE = NULL;
 
 static void unsub_all_switch_event_channel(void);
 
+/**
+ * anno@suy:2020-10-5
+ * 
+ * 此函数的作用为拷贝字符串
+ */
 static char *my_dup(const char *s)
 {
 	size_t len = strlen(s) + 1;
@@ -118,6 +123,7 @@ static char *my_dup(const char *s)
 
 	return (char *) memcpy(new, s, len);
 }
+/*anno@suy end*/
 
 #ifndef ALLOC
 #define ALLOC(size) malloc(size)
@@ -424,6 +430,11 @@ SWITCH_DECLARE(switch_status_t) switch_event_running(void)
 	return SYSTEM_RUNNING ? SWITCH_STATUS_SUCCESS : SWITCH_STATUS_FALSE;
 }
 
+/**
+ * anno@suy:2020-10-6 
+ * 
+ * 此函数将switch_event_types_t枚举值转化为字符串，如SWITCH_EVENT_API将被转化为"API"字符串返回
+ */
 SWITCH_DECLARE(const char *) switch_event_name(switch_event_types_t event)
 {
 	switch_assert(BLOCK != NULL);
@@ -431,7 +442,15 @@ SWITCH_DECLARE(const char *) switch_event_name(switch_event_types_t event)
 
 	return EVENT_NAMES[event];
 }
+/*anno@suy end*/
 
+/**
+ * anno@suy:2020-10-6 
+ * 
+ * 此函数将事件名称字符串转化为switch_event_types_t枚举值，如"SWITCH_EVENT_API"或"API"字符串将
+ * 被转化为SWITCH_EVENT_API枚举值，并填充到type参数中，如果字符串匹配不到返回SWITCH_STATUS_FALSE
+ * (失败)，否则返回SWITCH_STATUS_SUCCESS(成功)
+ */
 SWITCH_DECLARE(switch_status_t) switch_name_event(const char *name, switch_event_types_t *type)
 {
 	switch_event_types_t x;
@@ -447,6 +466,7 @@ SWITCH_DECLARE(switch_status_t) switch_name_event(const char *name, switch_event
 
 	return SWITCH_STATUS_FALSE;
 }
+/*anno@suy end*/
 
 SWITCH_DECLARE(switch_status_t) switch_event_free_subclass_detailed(const char *owner, const char *subclass_name)
 {
@@ -789,6 +809,11 @@ SWITCH_DECLARE(switch_status_t) switch_event_set_priority(switch_event_t *event,
 	return SWITCH_STATUS_SUCCESS;
 }
 
+/**
+ * anno@suy:2020-10-7 
+ * 
+ * 更新header_name，并更新对应的hash值
+ */
 SWITCH_DECLARE(switch_status_t) switch_event_rename_header(switch_event_t *event, const char *header_name, const char *new_header_name)
 {
 	switch_event_header_t *hp;
@@ -816,8 +841,13 @@ SWITCH_DECLARE(switch_status_t) switch_event_rename_header(switch_event_t *event
 
 	return x ? SWITCH_STATUS_SUCCESS : SWITCH_STATUS_FALSE;
 }
+/*anno@suy end*/
 
-
+/**
+ * anno@suy:2020-10-7 
+ * 
+ * 根据header_name在事件的headers链表中找到对应的header
+ */
 SWITCH_DECLARE(switch_event_header_t *) switch_event_get_header_ptr(switch_event_t *event, const char *header_name)
 {
 	switch_event_header_t *hp;
@@ -838,7 +868,16 @@ SWITCH_DECLARE(switch_event_header_t *) switch_event_get_header_ptr(switch_event
 	}
 	return NULL;
 }
+/*anno@suy end*/
 
+/**
+ * anno@suy:2020-10-7
+ * 
+ * 根据header_name和idx在事件的headers链表中找到对应的header->value
+ * 
+ * @param header_name 如果idx小于0时，根据名称查找
+ * @param idx 如果idx大于等于0，根据idx查找，但是idx值不能大于根据名称查找到的header->idx
+ */
 SWITCH_DECLARE(char *) switch_event_get_header_idx(switch_event_t *event, const char *header_name, int idx)
 {
 	switch_event_header_t *hp;
@@ -859,12 +898,19 @@ SWITCH_DECLARE(char *) switch_event_get_header_idx(switch_event_t *event, const 
 
 	return NULL;
 }
+/*anno@suy end*/
 
 SWITCH_DECLARE(char *) switch_event_get_body(switch_event_t *event)
 {
 	return (event ? event->body : NULL);
 }
 
+
+/**
+ * anno@suy:2020-10-7 
+ * 
+ * 此函数将以header_name为依据，从事件的headers链表中删除对应的header
+ */
 SWITCH_DECLARE(switch_status_t) switch_event_del_header_val(switch_event_t *event, const char *header_name, const char *val)
 {
 	switch_event_header_t *hp, *lp = NULL, *tp;
@@ -875,6 +921,8 @@ SWITCH_DECLARE(switch_status_t) switch_event_del_header_val(switch_event_t *even
 
 	tp = event->headers;
 	hash = switch_ci_hashfunc_default(header_name, &hlen);
+
+	//<<...
 	while (tp) {
 		hp = tp;
 		tp = tp->next;
@@ -912,6 +960,8 @@ SWITCH_DECLARE(switch_status_t) switch_event_del_header_val(switch_event_t *even
 #else
 			FREE(hp);
 #endif
+	//...>>
+
 			status = SWITCH_STATUS_SUCCESS;
 		} else {
 			lp = hp;
@@ -920,7 +970,13 @@ SWITCH_DECLARE(switch_status_t) switch_event_del_header_val(switch_event_t *even
 
 	return status;
 }
+/*anno@suy end*/
 
+/**
+ * anno@suy:2020-10-7 
+ * 
+ * 此函数根据header_name创建一个header，并返回此header
+ */
 static switch_event_header_t *new_header(const char *header_name)
 {
 	switch_event_header_t *header;
@@ -943,7 +999,14 @@ static switch_event_header_t *new_header(const char *header_name)
 		return header;
 
 }
+/*anno@suy end*/
 
+/**
+ * anno@suy:2020-10-6
+ * 
+ * 将val这个字符串从第八个字符开始(默认前面七个字符是ARRAY::)，以'|:'为分隔，并把分隔后的每个字符串作为
+ * switch_event_add_header_string的参数循环执行，插入到事件中
+ */
 SWITCH_DECLARE(int) switch_event_add_array(switch_event_t *event, const char *var, const char *val)
 {
 	char *data;
@@ -956,6 +1019,8 @@ SWITCH_DECLARE(int) switch_event_add_array(switch_event_t *event, const char *va
 	if (strlen(val) < 8) {
 		return -1;
 	}
+
+	//<<...
 
 	p = val + 7;
 
@@ -981,12 +1046,30 @@ SWITCH_DECLARE(int) switch_event_add_array(switch_event_t *event, const char *va
 		switch_event_add_header_string(event, SWITCH_STACK_PUSH, var, array[i]);
 	}
 
+	//...>>
+
 	free(array);
 	free(data);
 
 	return 0;
 }
+/*anno@suy end*/
 
+/**
+ * anno@suy:2020-10-6
+ * 
+ * 此函数由switch_event_add_header函数和switch_event_add_header_string函数调用，是freeswitch事件系统中
+ * 比较重要的函数，其作用主要是使用指定的方式将事件头(此函数传入header_name和data，函数内部生成事件头)插入
+ * 到事件中，下面会分几种情况来介绍此函数
+ * 
+ * @param event 要插入的事件
+ * @param stack 插入的方式
+ * @param header_name 事件头的名称
+ * @param data 事件头(或事件体)的数据
+ * 
+ * 第一种情况：插入方式为SWITCH_STACK_BOTTOM或是SWITCH_STACK_TOP，header_name不等于"_body"并且不含有'['
+ * 字符，此时直接创建新的header并加入到事件headers链表中的头(SWITCH_STACK_TOP)或尾(SWITCH_STACK_BOTTOM)
+ */
 static switch_status_t switch_event_base_add_header(switch_event_t *event, switch_stack_t stack, const char *header_name, char *data)
 {
 	switch_event_header_t *header = NULL;
@@ -996,11 +1079,17 @@ static switch_status_t switch_event_base_add_header(switch_event_t *event, switc
 	int index = 0;
 	char *real_header_name = NULL;
 
-
+	//如果header_name是"_body"，则将data填充至事件体
 	if (!strcmp(header_name, "_body")) {
 		switch_event_set_body(event, data);
 	}
 
+	//<<...
+
+	/*
+	 * 如果header_name中有'['字符，则将'['字符后面的字符串转成整形放入index变量中，并将[后面的
+	 * 字符串删除，如果没有'['字符，则index_ptr为NULL
+	 */
 	if ((index_ptr = strchr(header_name, '['))) {
 		index_ptr++;
 		index = atoi(index_ptr);
@@ -1013,7 +1102,17 @@ static switch_status_t switch_event_base_add_header(switch_event_t *event, switc
 
 	if (index_ptr || (stack & SWITCH_STACK_PUSH) || (stack & SWITCH_STACK_UNSHIFT)) {
 
+		/*
+		 * 此时index_ptr不为空(一开始header_name中有'['字符)或是stack标志中含有SWITCH_STACK_PUSH位
+		 * 或含有SWITCH_STACK_UNSHIFT位
+		 */
+
 		if (!(header = switch_event_get_header_ptr(event, header_name)) && index_ptr) {
+
+			/*
+			 * 此时没有在事件中获取到header_name对应的header，并且index_ptr不为空(一开始header_name
+			 * 中含有'['字符)
+			 */
 
 			header = new_header(header_name);
 
@@ -1026,9 +1125,23 @@ static switch_status_t switch_event_base_add_header(switch_event_t *event, switc
 
 		if (header || (header = switch_event_get_header_ptr(event, header_name))) {
 
+			/*
+			 * 如果刚才的header为空，并且index_ptr不为空则会进入前面的if代码，会执行header = 
+			 * new_header(header_name)，那时header就已经不为空了，所以只有一种情况不会进入当前的
+			 * 代码，那就是刚才的header为空，index_ptr也为空，此时header依然无法获取到值，那么
+			 * 这个if的第二个条件(header = switch_event_get_header_ptr(event, header_name))
+			 * 不可能不为NULL，这个条件岂不是多此一举？
+			 */
+
 			if (index_ptr) {
 				if (index > -1 && index <= 4000) {
 					if (index < header->idx) {
+
+						/*
+						 * 如果index值小于header->idx，则将header->array[index]的数据替换为本次
+						 * 传入的data数据
+						 */
+
 						FREE(header->array[index]);
 						header->array[index] = DUP(data);
 					} else {
@@ -1065,6 +1178,7 @@ static switch_status_t switch_event_base_add_header(switch_event_t *event, switc
 
 	if (!header) {
 
+		//如果data为NULL或空字符串，根据header_name删除事件中的header，并跳到函数的结束
 		if (zstr(data)) {
 			switch_event_del_header(event, header_name);
 			FREE(data);
@@ -1076,6 +1190,10 @@ static switch_status_t switch_event_base_add_header(switch_event_t *event, switc
 		}
 
 		if (!strncmp(data, "ARRAY::", 7)) {
+			/*
+			 * 此时要多次插入string，相当于将data以'|:'分隔成多个子data，递归执行本函数，
+			 * 详细分隔和插入方式见switch_event_add_array函数
+			 */
 			switch_event_add_array(event, header_name, data);
 			FREE(data);
 			goto end;
@@ -1163,12 +1281,14 @@ static switch_status_t switch_event_base_add_header(switch_event_t *event, switc
 		header->hash = switch_ci_hashfunc_default(header->name, &hlen);
 
 		if ((stack & SWITCH_STACK_TOP)) {
+			//在链表的头部插入
 			header->next = event->headers;
 			event->headers = header;
 			if (!event->last_header) {
 				event->last_header = header;
 			}
 		} else {
+			//在链表的尾部插入
 			if (event->last_header) {
 				event->last_header->next = header;
 			} else {
@@ -1179,13 +1299,21 @@ static switch_status_t switch_event_base_add_header(switch_event_t *event, switc
 		}
 	}
 
+	//...>>
+
  end:
 
 	switch_safe_free(real_header_name);
 
 	return SWITCH_STATUS_SUCCESS;
 }
+/*anno@suy end*/
 
+/**
+ * anno@suy:2020-10-7 
+ * 
+ * 格式化生成字符串，再调用switch_event_base_add_header插入到事件中
+ */
 SWITCH_DECLARE(switch_status_t) switch_event_add_header(switch_event_t *event, switch_stack_t stack, const char *header_name, const char *fmt, ...)
 {
 	int ret = 0;
@@ -1202,6 +1330,7 @@ SWITCH_DECLARE(switch_status_t) switch_event_add_header(switch_event_t *event, s
 
 	return switch_event_base_add_header(event, stack, header_name, data);
 }
+/*anno@suy end*/
 
 SWITCH_DECLARE(switch_status_t) switch_event_set_subclass_name(switch_event_t *event, const char *subclass_name)
 {

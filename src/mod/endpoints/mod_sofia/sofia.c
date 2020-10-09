@@ -2364,6 +2364,13 @@ void sofia_msg_thread_start(int idx)
 }
 
 //static int foo = 0;
+/**
+ * anno@suy:2020-10-8 #20.3.2.2.2
+ * 
+ * 摘自《FreeSWITCH权威指南》：
+ * 
+ * sofia_queue_message函数将保证我们的消息队列有足够的的处理能力。然后，进行必要的检查。
+ */
 void sofia_queue_message(sofia_dispatch_event_t *de)
 {
 	int launch = 0;
@@ -2392,8 +2399,14 @@ void sofia_queue_message(sofia_dispatch_event_t *de)
 		}
 	}
 
+	//-> 将收到的消息通过下面的switch_queue_push推到一个模块及的消息队列中去（即这里的msg_queue）
 	switch_queue_push(mod_sofia_globals.msg_queue, de);
 }
+/**
+ * 至此，SIP事件的接收就完成了。如果后续收到其他SIP事件，将进行下次回调，并推到队列中等候处理。
+ * 
+ * anno@suy end
+ */
 
 static void set_call_id(private_object_t *tech_pvt, sip_t const *sip)
 {
@@ -2404,6 +2417,13 @@ static void set_call_id(private_object_t *tech_pvt, sip_t const *sip)
 }
 
 
+/**
+ * anno@suy:2020-10-8 #20.3.2.2.1
+ * 
+ * 摘自《FreeSWITCH权威指南》：
+ * 
+ * 当我们的服务收到SIP消息后，便会调用sofia_event_callback回调函数。如果得到回调，则会收到一个nua_event_t结果的SIP事件event。
+ */
 void sofia_event_callback(nua_event_t event,
 						  int status,
 						  char const *phrase,
@@ -2415,6 +2435,7 @@ void sofia_event_callback(nua_event_t event,
 	uint32_t sess_count = switch_core_session_count();
 	uint32_t sess_max = switch_core_session_limit(0);
 
+	//-> 即使不看Sofia-SIP库的文档，我们也能从下面的switch语句以及后面的case分支中看出————该事件到底对应什么类型的SIP消息了。
 	switch(event) {
 	case nua_i_terminated:
 		if ((status == 401 || status == 407 || status == 403) && sofia_private) {
@@ -2456,6 +2477,7 @@ void sofia_event_callback(nua_event_t event,
 			}
 		}
 		break;
+	//-> 如果收到SIP INVITE消息，那么它一定会匹配到下面一行
 	case nua_i_invite:
 	case nua_i_register:
 	case nua_i_options:
@@ -2512,6 +2534,7 @@ void sofia_event_callback(nua_event_t event,
 	de->profile = profile;
 	de->nua = (nua_t *)su_home_ref(nua_get_home(nua));
 
+	//-> 如果这是第一次INVITE请求
 	if (event == nua_i_invite && !sofia_private) {
 		switch_core_session_t *session;
 		private_object_t *tech_pvt = NULL;
@@ -2578,11 +2601,17 @@ void sofia_event_callback(nua_event_t event,
 		if (sofia_test_pflag(profile, PFLAG_CALLID_AS_UUID)) {
 			session = switch_core_session_request_uuid(sofia_endpoint_interface, SWITCH_CALL_DIRECTION_INBOUND, SOF_NONE, NULL, sip->sip_call_id->i_id);
 		} else {
+			/*-> 
+			 * 调用switch_core_session_request生成一个新的Session，并赋值给session指针。到这里INVITE请求在我们系统中起作
+			 * 用了————它导致我们的系统创建了一个Session，在以后所有该INVITE消息相关的会话消息中，都会与该Session相关（当然，
+			 * 具体的代码还有很多，我们就不再深入了）。
+			 */
 			session = switch_core_session_request(sofia_endpoint_interface, SWITCH_CALL_DIRECTION_INBOUND, SOF_NONE, NULL);
 		}
 
 		if (session) {
 			const char *channel_name = NULL;
+			//-> 初始化一个tech_pvt指针（该指针所指向的结构中将用于保存本Session的私有数据，我们后面还会讲到）。
 			tech_pvt = sofia_glue_new_pvt(session);
 
 			if (sip->sip_from) {
@@ -2595,6 +2624,7 @@ void sofia_event_callback(nua_event_t event,
 				channel_name = url_set_chanvars(session, sip->sip_referred_by->b_url, sip_referred_by);
 			}
 
+			//-> 下面将这些私有数据与session绑定
 			sofia_glue_attach_private(session, profile, tech_pvt, channel_name);
 
 			set_call_id(tech_pvt, sip);
@@ -2614,6 +2644,7 @@ void sofia_event_callback(nua_event_t event,
 		}
 
 
+		//-> 为该Session启动一个新的线程，以执行后续耗时的操作，避免阻塞当前的线程。
 		if (switch_core_session_thread_launch(session) != SWITCH_STATUS_SUCCESS) {
 			char *uuid;
 
@@ -2637,6 +2668,7 @@ void sofia_event_callback(nua_event_t event,
 		switch_copy_string(sofia_private->uuid_str, switch_core_session_get_uuid(session), sizeof(sofia_private->uuid_str));
 		sofia_private->uuid = sofia_private->uuid_str;
 
+		//-> 当然，启动了新线程后，对该SIP事件的处理还没有完，它还会后续设置de指针
 		de->init_session = session;
 		switch_core_session_queue_signal_data(session, de);
 		goto end;
@@ -2652,13 +2684,19 @@ void sofia_event_callback(nua_event_t event,
 		}
 	}
 
+	/*-> 
+	 * 不同的消息将进行不同的处理，但大部分都会执行到下面这行代码，将消息通过一个核心的消息队列分发出去（其中，de是一个
+	 * sofia_dispatch_event_t的结构体指针，它包含了本次收到的SIP消息）
+	 */
 	sofia_queue_message(de);
+	//-> Sofia-SIP库在底层是一个单线程的结构，因此在这里我们使用了消息队列以提高并发量。#->20.3.2.2.2
 
  end:
 	//switch_cond_next();
 
 	return;
 }
+/*anno@suy end*/
 
 
 void event_handler(switch_event_t *event)
@@ -3133,8 +3171,14 @@ switch_thread_t *launch_sofia_worker_thread(sofia_profile_t *profile)
 	return thread;
 }
 
+/**
+ * anno@suy:2020-10-8 #20.3.2.1.3
+ * 
+ * 摘自《FreeSWITCH权威指南》：
+ */
 void *SWITCH_THREAD_FUNC sofia_profile_thread_run(switch_thread_t *thread, void *obj)
 {
+	//-> 下面将得到profile指针的值
 	sofia_profile_t *profile = (sofia_profile_t *) obj;
 	//switch_memory_pool_t *pool;
 	sip_alias_node_t *node;
@@ -3185,6 +3229,11 @@ void *SWITCH_THREAD_FUNC sofia_profile_thread_run(switch_thread_t *thread, void 
 	}
 
 	do {
+		/*->
+		 * 下面将调用nua_create函数建立一个UA(User Agent)。nua_create是Sofia-SIP库提供的函数，它将启动一个UA监听相关的端口
+		 * （如大家熟知的5060），并等待SIP消息的到来。一旦收到SIP请求，它便会回调sofia_event_callback回调函数，该回调函数中
+		 * 将带着对应的profile作为回调参数。
+		 */
 		profile->nua = nua_create(profile->s_root,	/* Event loop */
 								  sofia_event_callback,	/* Callback for processing events */
 								  profile,	/* Additional data to pass to callback */
@@ -3254,6 +3303,7 @@ void *SWITCH_THREAD_FUNC sofia_profile_thread_run(switch_thread_t *thread, void 
 								  TAG_IF(sofia_test_pflag(profile, PFLAG_NO_CONNECTION_REUSE),
 										 TPTAG_REUSE(0)),
 								  TAG_END());	/* Last tag should always finish the sequence */
+		//-> 关于Sofia-SIP底层的库我们就不深入研究了。到此为止，我们的SIP服务已经启动了，就等着接收SIP消息了。#->20.3.2.2.1
 
 		if (!profile->nua) {
 			switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Error Creating SIP UA for profile: %s (%s) ATTEMPT %d (RETRY IN %d SEC)\n",
@@ -3535,6 +3585,7 @@ void *SWITCH_THREAD_FUNC sofia_profile_thread_run(switch_thread_t *thread, void 
 
 	return NULL;
 }
+/*anno@suy end*/
 
 void sofia_profile_destroy(sofia_profile_t *profile)
 {
@@ -3546,6 +3597,11 @@ void sofia_profile_destroy(sofia_profile_t *profile)
 	}
 }
 
+/**
+ * anno@suy:2020-10-8 #20.3.2.1.2
+ * 
+ * 摘自《FreeSWITCH权威指南》：
+ */
 void launch_sofia_profile_thread(sofia_profile_t *profile)
 {
 	//switch_thread_t *thread;
@@ -3555,8 +3611,10 @@ void launch_sofia_profile_thread(sofia_profile_t *profile)
 	switch_threadattr_detach_set(thd_attr, 1);
 	switch_threadattr_stacksize_set(thd_attr, SWITCH_THREAD_STACKSIZE);
 	switch_threadattr_priority_set(thd_attr, SWITCH_PRI_REALTIME);
+	//-> 启动一个新的线程，并执行sofia_profile_thread_run，同时将profile作为输入参数。#-> 20.3.2.1.3
 	switch_thread_create(&profile->thread, thd_attr, sofia_profile_thread_run, profile, profile->pool);
 }
+/*anno@suy end*/
 
 static void logger(void *logarg, char const *fmt, va_list ap)
 {
@@ -4391,6 +4449,17 @@ done:
 	return status;
 }
 
+/**
+ * anno@suy:2020-10-8 #20.3.2.1.1
+ * 
+ * 摘自《FreeSWITCH权威指南》：
+ * 
+ * 接下来，我们来看一下Soifa（即我们的SIP服务）到底是从哪里加载的，通话的建立是从哪里开始的，又是如何进行的。
+ * 
+ * 关于Sofia的加载，其实我们刚刚已经讲过了，它就隐藏在mod_sofia.c的SWITCH_MODULE_LOAD_FUNCTION(mod_sofia_load)的
+ * config_sofia函数中。该函数是在下面定义的。该函数非常长，它解析XML配置文件，初始化与Profile相关的变量的数据结构，
+ * 并启动相关的Profile。我们熟知的默认的internal Profile就是在此函数中启动的。
+ */
 switch_status_t config_sofia(sofia_config_t reload, char *profile_name)
 {
 	char *cf = "sofia.conf";
@@ -6187,6 +6256,7 @@ switch_status_t config_sofia(sofia_config_t reload, char *profile_name)
 						switch_event_t *s_event;
 						if (!profile->extsipport) profile->extsipport = profile->sip_port;
 
+						//-> 启动相关的Profile #->20.3.2.1.2
 						launch_sofia_profile_thread(profile);
 						if (profile->odbc_dsn) {
 							switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "Connecting ODBC Profile %s [%s]\n", profile->name, url);
@@ -6231,6 +6301,7 @@ switch_status_t config_sofia(sofia_config_t reload, char *profile_name)
 
 	return status;
 }
+/*anno@suy end*/
 
 const char *sofia_gateway_status_name(sofia_gateway_status_t status)
 {
