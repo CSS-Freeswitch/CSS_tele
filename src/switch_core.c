@@ -2417,23 +2417,34 @@ static void switch_load_core_config(const char *file)
 SWITCH_DECLARE(const char *) switch_core_banner(void)
 {
 
-	return ("\n"
-			".=============================================================.\n"
-			"|   _____              ______        _____ _____ ____ _   _   |\n"
-			"|  |  ___| __ ___  ___/ ___\\ \\      / /_ _|_   _/ ___| | | |  |\n"
-			"|  | |_ | '__/ _ \\/ _ \\___ \\\\ \\ /\\ / / | |  | || |   | |_| |  |\n"
-			"|  |  _|| | |  __/  __/___) |\\ V  V /  | |  | || |___|  _  |  |\n"
-			"|  |_|  |_|  \\___|\\___|____/  \\_/\\_/  |___| |_| \\____|_| |_|  |\n"
-			"|                                                             |\n"
-			".=============================================================."
-			"\n"
+	/*delete@suy:2020-9-26*/
+	/*<anno@suy:2020-9-26> 去掉了freeswitch的logo以及网站信息*/
+	
+	// return ("\n"
+	// 		".=============================================================.\n"
+	// 		"|   _____              ______        _____ _____ ____ _   _   |\n"
+	// 		"|  |  ___| __ ___  ___/ ___\\ \\      / /_ _|_   _/ ___| | | |  |\n"
+	// 		"|  | |_ | '__/ _ \\/ _ \\___ \\\\ \\ /\\ / / | |  | || |   | |_| |  |\n"
+	// 		"|  |  _|| | |  __/  __/___) |\\ V  V /  | |  | || |___|  _  |  |\n"
+	// 		"|  |_|  |_|  \\___|\\___|____/  \\_/\\_/  |___| |_| \\____|_| |_|  |\n"
+	// 		"|                                                             |\n"
+	// 		".=============================================================."
+	// 		"\n"
 
-			"|   Anthony Minessale II, Michael Jerris, Brian West, Others  |\n"
-			"|   FreeSWITCH (http://www.freeswitch.org)                    |\n"
-			"|   Paypal Donations Appreciated: paypal@freeswitch.org       |\n"
-			"|   Brought to you by ClueCon http://www.cluecon.com/         |\n"
-			".=============================================================.\n"
-			"\n");
+	// 		"|   Anthony Minessale II, Michael Jerris, Brian West, Others  |\n"
+	// 		"|   FreeSWITCH (http://www.freeswitch.org)                    |\n"
+	// 		"|   Paypal Donations Appreciated: paypal@freeswitch.org       |\n"
+	// 		"|   Brought to you by ClueCon http://www.cluecon.com/         |\n"
+	// 		".=============================================================.\n"
+	// 		"\n");
+
+	/*<anno@suy end>*/
+	/*delete@suy end*/
+
+	/*create@suy:2020-9-26*/
+	return ("");
+	/*create@suy end*/
+
 }
 
 switch_status_t switch_core_sqldb_init(const char **err)

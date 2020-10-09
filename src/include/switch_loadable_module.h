@@ -390,6 +390,13 @@ SWITCH_MOD_DECLARE(switch_status_t) switch_module_shutdown(void);
 	break; \
 	}
 
+/**
+ * anno@suy:2020-10-8 #20.1.1.3
+ * 
+ * 摘自《FreeSWITCH权威指南》：
+ * 
+ * SWITCH_ADD_APP也是一个宏，它是在本文件中定义的
+ */
 #define SWITCH_ADD_APP(app_int, int_name, short_descript, long_descript, funcptr, syntax_string, app_flags) \
 	for (;;) { \
 	app_int = (switch_application_interface_t *)switch_loadable_module_create_interface(*module_interface, SWITCH_APPLICATION_INTERFACE); \
@@ -401,6 +408,34 @@ SWITCH_MOD_DECLARE(switch_status_t) switch_module_shutdown(void);
 	app_int->flags = app_flags; \
 	break; \
 	}
+/**
+ * 这个宏定义的非常巧妙，它使用了一个无限的for循环，但由于该循环的最后一条语句是break，因此它只会执行一次。该循环跟Linux
+ * 内核中的 “do {...} while(0)” 有异曲同工之妙（参见20.3.6节）。
+ * 
+ * 改宏展开后的结果就相当于（为了易读我们去掉了行尾的续行符）：
+ * 
+ * for (;;) { 
+ *     app_int = (switch_application_interface_t *)switch_loadable_module_create_interface(*module_interface, SWITCH_APPLICATION_INTERFACE); 
+ *     app_int->interface_name = int_name; 
+ *     app_int->application_function = funcptr; 
+ *     app_int->short_desc = short_descript; 
+ *     app_int->long_desc = long_descript; 
+ *     app_int->syntax = syntax_string; 
+ *     app_int->flags = app_flags; 
+ *     break; 
+ * }
+ * 
+ * 所以一个SWITCH_ADD_APP相当于使用switch_loadable_module_create_interface函数创建了一个SWITCH_APPLICATION_INTERFACE
+ * 类型的接口（即我们所说的Application Interface）变量app_interface，然后给它赋予合适的值。大部分参数都是一些描述信息或帮
+ * 助字符串，最重要的是下面两行，其确定了echo这个app_interface与我们定义的echo_function的对应关系。
+ *     app_int->interface_name = "echo"; 
+ *     app_int->application_function = echo_function;
+ * 
+ * 因而，通过SWITCH_ADD_APP这个宏，相当于给系统核心添加了一个echo App，它对应源代码中的echo_function。这样每当系统执行到
+ * Dialplan中的echo App时，便通过这里的对应关系找到相应的函数入口，进而执行echo_function函数。#->20.1.2.1
+ * 
+ * anno@suy end
+ */
 
 #define SWITCH_ADD_CHAT_APP(app_int, int_name, short_descript, long_descript, funcptr, syntax_string, app_flags) \
 	for (;;) { \

@@ -6096,17 +6096,24 @@ SWITCH_STANDARD_APP(sofia_sla_function)
 	switch_ivr_eavesdrop_session(session, data, NULL, ED_MUX_READ | ED_MUX_WRITE | ED_COPY_DISPLAY);
 }
 
-
+/**
+ * anno@suy:2020-10-8 #20.3.1.1
+ * 
+ * 摘自《FreeSWITCH权威指南》：
+ */
 SWITCH_MODULE_LOAD_FUNCTION(mod_sofia_load)
 {
 	switch_chat_interface_t *chat_interface;
+	//-> 下面定义了一个api_interface指针，用于往核心中添加API
 	switch_api_interface_t *api_interface;
 	switch_management_interface_t *management_interface;
 	switch_application_interface_t *app_interface;
 	struct in_addr in;
 	switch_status_t status;
 
+	//-> 将全局变量mod_sofia_globals清零。该全局变量在整个模块内是有效的，它用于记录一些模块的数据和变量
 	memset(&mod_sofia_globals, 0, sizeof(mod_sofia_globals));
+	//-> 然后进行一定的初始化
 	mod_sofia_globals.destroy_private.destroy_nh = 1;
 	mod_sofia_globals.destroy_private.is_static = 1;
 	mod_sofia_globals.keep_private.is_static = 1;
@@ -6223,6 +6230,7 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_sofia_load)
 	strcpy(mod_sofia_globals.hostname, switch_core_get_switchname());
 
 	switch_mutex_lock(mod_sofia_globals.mutex);
+	//-> 将全局变量的一个running成员变量设为1，标志该模块是在运行的。
 	mod_sofia_globals.running = 1;
 	switch_mutex_unlock(mod_sofia_globals.mutex);
 
@@ -6252,12 +6260,15 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_sofia_load)
 		return SWITCH_STATUS_GENERR;
 	}
 
+	//-> 注：在FreeSWITCH权威指南中，下面这一段是在sofia_msg_thread_start(0)后面的，可能是新版的freeswitch源码有所变动
+	//-> 调用config_sofia函数来从XML中读取该模块的配置并启动相关的Sofia Profile。
 	if (config_sofia(SOFIA_CONFIG_LOAD, NULL) != SWITCH_STATUS_SUCCESS) {
 		mod_sofia_globals.running = 0;
 		switch_goto_status(SWITCH_STATUS_GENERR, err);
 		return SWITCH_STATUS_GENERR;
 	}
 
+	//-> 下面将启动一个消息处理线程，用于SIP消息的处理。
 	sofia_msg_thread_start(0);
 
 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Waiting for profiles to start\n");
@@ -6338,12 +6349,19 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_sofia_load)
 	}
 
 	/* connect my internal structure to the blank pointer passed to me */
+	//-> 向核心层注册本模块
 	*module_interface = switch_loadable_module_create_module_interface(pool, modname);
+	//-> 初始化一个新的Endpoint，接着指定新的Endpoint的名字及绑定相关的回调函数(下面第二行到底第五行)
 	sofia_endpoint_interface = switch_loadable_module_create_interface(*module_interface, SWITCH_ENDPOINT_INTERFACE);
 	sofia_endpoint_interface->interface_name = "sofia";
 	sofia_endpoint_interface->io_routines = &sofia_io_routines;
 	sofia_endpoint_interface->state_handler = &sofia_event_handlers;
 	sofia_endpoint_interface->recover_callback = sofia_recover_callback;
+	/*->
+	 * 后面的代码还有很多，我们就不继续往下看到了。至此，我们还有两个细节没有研究明白：第一，就是上面刚刚讲到的这些回调函数
+	 * 都是怎么使用的；第二，就是底层的Sofia库是在哪里启动的，又是如何接收SIP消息并建立通话的。为了从根本上了解一路通话的建
+	 * 立过程，这次我们先从第二个问题开始看。#->20.3.2.1.1
+	 */
 
 	management_interface = switch_loadable_module_create_interface(*module_interface, SWITCH_MANAGEMENT_INTERFACE);
 	management_interface->relative_oid = "1001";
@@ -6405,6 +6423,7 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_sofia_load)
 	mod_sofia_shutdown_cleanup();
 	return status;
 }
+/*anno@suy end*/
 
 void mod_sofia_shutdown_cleanup() {
 	int sanity = 0;

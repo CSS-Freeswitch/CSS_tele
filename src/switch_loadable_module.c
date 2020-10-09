@@ -153,6 +153,9 @@ static void switch_loadable_module_runtime(void)
 	switch_mutex_unlock(loadable_modules.mutex);
 }
 
+/**
+ * anno@suy:2020-9-30
+ */
 static switch_status_t switch_loadable_module_process(char *key, switch_loadable_module_t *new_module, switch_hash_t *event_hash)
 {
 	switch_event_t *event;
@@ -178,15 +181,18 @@ static switch_status_t switch_loadable_module_process(char *key, switch_loadable
 	new_module->key = switch_core_strdup(new_module->pool, key);
 
 	switch_mutex_lock(loadable_modules.mutex);
+	//插入模块容器中的模块哈希表，以文件名作为key
 	switch_core_hash_insert(loadable_modules.module_hash, key, new_module);
 
 	if (new_module->module_interface->endpoint_interface) {
+		//如果该模块实现了端点接口
 		const switch_endpoint_interface_t *ptr;
 		for (ptr = new_module->module_interface->endpoint_interface; ptr; ptr = ptr->next) {
 			if (!ptr->interface_name) {
 				switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Failed to load endpoint interface from %s due to no interface name.\n", key);
 			} else {
 				switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "Adding Endpoint '%s'\n", ptr->interface_name);
+				//插入到模块容器中的端点哈希表
 				switch_core_hash_insert(loadable_modules.endpoint_hash, ptr->interface_name, (const void *) ptr);
 				if (switch_event_create(&event, SWITCH_EVENT_MODULE_LOAD) == SWITCH_STATUS_SUCCESS) {
 					switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "type", "endpoint");
@@ -793,6 +799,7 @@ static switch_status_t switch_loadable_module_process(char *key, switch_loadable
 	return SWITCH_STATUS_SUCCESS;
 
 }
+/*anno@suy end*/
 
 #define CHAT_MAX_MSG_QUEUE 101
 #define CHAT_QUEUE_SIZE 5000
@@ -1664,6 +1671,9 @@ static switch_status_t switch_loadable_module_unprocess(switch_loadable_module_t
 }
 
 
+/**
+ * anno@suy:2020-9-30
+ */
 static switch_status_t switch_loadable_module_load_file(char *path, char *filename, switch_bool_t global, switch_loadable_module_t **new_module)
 {
 	switch_loadable_module_t *module = NULL;
@@ -1684,9 +1694,11 @@ static switch_status_t switch_loadable_module_load_file(char *path, char *filena
 
 	switch_core_new_memory_pool(&pool);
 	*new_module = NULL;
-
+	
+	//-> 每个模块要实现模块函数表，并且命名规则如下，比如mod_sofia模块有sofia_module_interface
 	struct_name = switch_core_sprintf(pool, "%s_module_interface", filename);
 
+	//-> switch_dso_open()打开动态链接库
 #ifdef WIN32
 	dso = switch_dso_open("FreeSwitch.dll", load_global, &derr);
 #elif defined (MACOSX) || defined(DARWIN)
@@ -1699,6 +1711,7 @@ static switch_status_t switch_loadable_module_load_file(char *path, char *filena
 	dso = switch_dso_open(NULL, load_global, &derr);
 #endif
 	if (!derr && dso) {
+		//-> 获取模块函数表指针
 		interface_struct_handle = switch_dso_data_sym(dso, struct_name, &derr);
 	}
 
@@ -1740,6 +1753,7 @@ static switch_status_t switch_loadable_module_load_file(char *path, char *filena
 
 		if (interface_struct_handle) {
 			mod_interface_functions = interface_struct_handle;
+			//-> 找到模块的load函数指针
 			load_func_ptr = mod_interface_functions->load;
 		}
 
@@ -1748,6 +1762,7 @@ static switch_status_t switch_loadable_module_load_file(char *path, char *filena
 			break;
 		}
 
+		//-> 执行该模块的load函数，返回模块接口 
 		status = load_func_ptr(&module_interface, pool);
 
 		if (status != SWITCH_STATUS_SUCCESS && status != SWITCH_STATUS_NOUNLOAD) {
@@ -1761,6 +1776,7 @@ static switch_status_t switch_loadable_module_load_file(char *path, char *filena
 			break;
 		}
 
+		//-> 申请module数据结构
 		if ((module = switch_core_alloc(pool, sizeof(switch_loadable_module_t))) == 0) {
 			abort();
 		}
@@ -1787,6 +1803,7 @@ static switch_status_t switch_loadable_module_load_file(char *path, char *filena
 		return SWITCH_STATUS_GENERR;
 	}
 
+	//-> 填充module结构体字段
 	module->pool = pool;
 	module->filename = switch_core_strdup(module->pool, path);
 	module->module_interface = module_interface;
@@ -1807,11 +1824,16 @@ static switch_status_t switch_loadable_module_load_file(char *path, char *filena
 	return SWITCH_STATUS_SUCCESS;
 
 }
+/*anno@suy end*/
+
 SWITCH_DECLARE(switch_status_t) switch_loadable_module_load_module(const char *dir, const char *fname, switch_bool_t runtime, const char **err)
 {
 	return switch_loadable_module_load_module_ex(dir, fname, runtime, SWITCH_FALSE, err, SWITCH_LOADABLE_MODULE_TYPE_COMMON, NULL);
 }
 
+/**
+ * anno@suy:2020-9-30
+ */
 static switch_status_t switch_loadable_module_load_module_ex(const char *dir, const char *fname, switch_bool_t runtime, switch_bool_t global, const char **err, switch_loadable_module_type_t type, switch_hash_t *event_hash)
 {
 	switch_size_t len = 0;
@@ -1852,14 +1874,18 @@ static switch_status_t switch_loadable_module_load_module_ex(const char *dir, co
 
 
 	if (switch_core_hash_find_locked(loadable_modules.module_hash, file, loadable_modules.mutex)) {
+		//-> 如果已经加载
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "Module %s Already Loaded!\n", file);
 		*err = "Module already loaded";
 		status = SWITCH_STATUS_FALSE;
 	} else if ((status = switch_loadable_module_load_file(path, file, global, &new_module)) == SWITCH_STATUS_SUCCESS) {
+		//-> 如果未加载，则从模块名对应的文件载入
 		new_module->type = type;
 
+		//-> 填充模块对象结构体，加入模块容器
 		if ((status = switch_loadable_module_process(file, new_module, event_hash)) == SWITCH_STATUS_SUCCESS && runtime) {
 			if (new_module->switch_module_runtime) {
+				//-> 如果有实现模块runtime函数，创建线程执行
 				new_module->thread = switch_core_launch_thread(switch_loadable_module_exec, new_module, new_module->pool);
 			}
 		} else if (status != SWITCH_STATUS_SUCCESS) {
@@ -1873,6 +1899,7 @@ static switch_status_t switch_loadable_module_load_module_ex(const char *dir, co
 	return status;
 
 }
+/*anno@suy end*/
 
 SWITCH_DECLARE(switch_status_t) switch_loadable_module_exists(const char *mod)
 {

@@ -50,7 +50,9 @@
     <load module="mod_verto"/>
 
     <!-- Applications -->
-    <load module="mod_signalwire"/>
+    <!-- delete@suy:2020-9-28 -->
+    <!-- <load module="mod_signalwire"/> -->
+    <!-- delete end -->
     <load module="mod_commands"/>
     <load module="mod_conference"/>
     <!-- <load module="mod_curl"/> -->

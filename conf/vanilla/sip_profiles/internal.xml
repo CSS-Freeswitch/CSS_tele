@@ -230,7 +230,9 @@
     <!--<param name="odbc-dsn" value="pgsql://hostaddr=127.0.0.1 dbname=freeswitch user=freeswitch password='' options='-c client_min_messages=NOTICE' application_name='freeswitch'" />-->
 
     <!--Uncomment to set all inbound calls to no media mode-->
-    <!--<param name="inbound-bypass-media" value="true"/>-->
+    <!-- recovery@suy:2020-9-30 -->
+    <param name="inbound-bypass-media" value="true"/>
+    <!-- recovery@suy end -->
 
     <!--Uncomment to set all inbound calls to proxy media mode-->
     <!--<param name="inbound-proxy-media" value="true"/>-->
