@@ -51,7 +51,9 @@
 
     <!-- Applications -->
     <!-- delete@suy:2020-9-28 -->
+    <!-- <anno@suy:2020-9-28> 启动时不加载mod_signalwire模块 -->
     <!-- <load module="mod_signalwire"/> -->
+    <!-- <anno@suy end> -->
     <!-- delete end -->
     <load module="mod_commands"/>
     <load module="mod_conference"/>

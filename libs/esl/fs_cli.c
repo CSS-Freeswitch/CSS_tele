@@ -1042,6 +1042,7 @@ static const char *basic_gets(int *cnt)
 }
 
 /*delete@suy:2020-9-27*/
+/*<anno@suy:2020-9-27> 去掉了fs_cli的启动logo*/
 
 // static const char *banner =
 // 	".=======================================================.\n"
@@ -1060,6 +1061,7 @@ static const char *basic_gets(int *cnt)
 //     ".=======================================================.\n"
 //     "\n";
 
+/*<anno@suy end>*/
 /*delete@suy end*/
 
 /*create@suy:2020-9-27*/

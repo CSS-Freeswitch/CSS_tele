@@ -231,7 +231,9 @@
 
     <!--Uncomment to set all inbound calls to no media mode-->
     <!-- recovery@suy:2020-9-30 -->
+    <!-- <anno@suy:2020-9-30> 设置默认媒体绕过 -->
     <param name="inbound-bypass-media" value="true"/>
+    <!-- <anno@suy end> -->
     <!-- recovery@suy end -->
 
     <!--Uncomment to set all inbound calls to proxy media mode-->

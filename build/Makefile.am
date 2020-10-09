@@ -2,6 +2,7 @@ MK=`echo $(MAKE) | $(AWK) '{printf "%5s\n", $$0}' `
 
 all:
 	## delete@suy:2020-9-27
+	## <anno@suy:2020-9-27> 去掉安装时的freeswitch提示信息
 	## 
 	## @echo " +---------- FreeSWITCH Build Complete ----------+"
 	## @echo " + FreeSWITCH has been successfully built.       +"
@@ -14,7 +15,8 @@ all:
 	## @echo " +                                               +"
 	## @echo " +-----------------------------------------------+"
 	## @cat $(switch_srcdir)/cluecon2.tmpl
-	## 
+	##
+	## <anno@suy end> 
 	## delete@suy end
 
 	## create@suy:2020-9-27
@@ -29,6 +31,7 @@ all:
 
 install:
 	## delete@suy:2020-9-27
+	## <anno@suy:2020-9-27> 去掉安装时的freeswitch提示信息
 	## 
 	## @echo " +---------- FreeSWITCH install Complete ----------+"
 	## @echo " + FreeSWITCH has been successfully installed.     +"
@@ -89,6 +92,7 @@ install:
 	## @cat $(switch_srcdir)/cluecon2.tmpl
 	## @sh $(switch_srcdir)/build/modcheck.sh $(DESTDIR)$(modulesdir)
 	## 
+	## <anno@suy end> 
 	## delete@suy end
 
 	## create@suy:2020-9-27

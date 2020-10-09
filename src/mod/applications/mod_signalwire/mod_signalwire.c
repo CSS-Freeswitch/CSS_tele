@@ -981,7 +981,7 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_signalwire_load)
 	// @todo register nodestore callbacks here if needed
 
 	/*delete@suy:2020-9-26*/
-	/*<anno@suy:2020-9-26> 去掉了freeswitch的启动logo*/
+	/*<anno@suy:2020-9-26> 去掉了freeswitch的启动时signalwire的logo*/
 
 	// switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CONSOLE, "Welcome to\n"
 	// "     _____ _                   ___       ___\n"

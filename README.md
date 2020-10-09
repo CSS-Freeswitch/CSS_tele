@@ -1,63 +1,189 @@
-# FreeSWITCH
+## 代码变动
 
-FreeSWITCH is a Software Defined Telecom Stack enabling the digital transformation from proprietary telecom switches to a versatile software implementation that runs on any commodity hardware. From a Raspberry PI to a multi-core server, FreeSWITCH can unlock the telecommunications potential of any device. Combined with our hosted cloud platform, SignalWire, FreeSWITCH can interconnect with the outside world and scale to any size.
+### 删除Logo
 
-Visit  [https://signalwire.com](https://signalwire.com/)  or https://github.com/signalwire for more info.
+* build\Makefile.am 第4行：去掉安装时的freeswitch提示信息
 
-## Getting Started
+```yaml
+	......
+	## delete@suy:2020-9-27
+	## 
+	## @echo " +---------- FreeSWITCH Build Complete ----------+"
+	## @echo " + FreeSWITCH has been successfully built.       +"
+	## @echo " + Install by running:                           +"
+	......
+	
+	## create@suy:2020-9-27
+	@echo " +---------------- Build Complete ---------------+"
+	@echo " + successfully built.                           +"
+	@echo " + Install by running:                           +"
+	@echo " +                                               +"
+	......
+```
+* build\Makefile.am 第33行：去掉安装时的freeswitch提示信息
+```yaml
+	......
+	## delete@suy:2020-9-27
+	## 
+	## @echo " +---------- FreeSWITCH install Complete ----------+"
+	## @echo " + FreeSWITCH has been successfully installed.     +"
+	## @echo " +                                                 +"
+	......
 
-FreeSWITCH is available on [Github](https://github.com/signalwire/freeswitch) in source code format.  You can checkout the development branch and build for many poplular platforms including Linux, Windows, MacOSX and BSD.  There is an issue tracker and pull request system available as part of the repo online.
+	## create@suy:2020-9-27
+	@echo " +---------------- install Complete ---------------+"
+	@echo " + successfully installed.                         +"
+	@echo " +                                                 +"
+	@echo " +       Install sounds:                           +"
+	......
+```
+* libs\esl\fs_cli.c 第1044行：去掉了fs_cli的启动logo
+```c
+......
+/*delete@suy:2020-9-27*/
 
-See [https://freeswitch.com/#getting-started](https://freeswitch.com/#getting-started) for more detailed instructions.
+// static const char *banner =
+// 	".=======================================================.\n"
+//     "|            _____ ____     ____ _     ___              |\n"
+//     "|           |  ___/ ___|   / ___| |   |_ _|             |\n"
+......
 
-## Additional Help
+/*create@suy:2020-9-27*/
+static const char *banner = "";
+/*create@suy end*/
+......
+```
+* libs\esl\src\include\cc.h 第1行：去掉了fs_cli的启动logo
+```c
+/*delete@suy:2020-9-27*/
 
-If you need assistance or have an interest in using a commercially supported build, you can contact coreteam@freeswitch.com to learn about professional services to support your project.
+// const char *cc = ".=======================================================================================================.\n"
+//                  "|       _                            _    ____ _             ____                                       |\n"
+//                  "|      / \\   _ __  _ __  _   _  __ _| |  / ___| |_   _  ___ / ___|___  _ __                             |\n"
+//                  "|     / _ \\ | '_ \\| '_ \\| | | |/ _` | | | |   | | | | |/ _ \\ |   / _ \\| '_ \\                            |\n"
+......
 
-## Voice-over-IP services - SIP / SMS - App Integrations
+/*create@suy:2020-9-27*/
+const char *cc = "";
+const char *cc_s = "";
+/*create@suy end*/
+......
+```
+* src\switch_core.c 第2147行：去掉了freeswitch的logo以及网站信息
+```c
+	......
+	/*delete@suy:2020-9-26*/
+	
+	// return ("\n"
+	// 		".=============================================================.\n"
+	// 		"|   _____              ______        _____ _____ ____ _   _   |\n"
+	// 		"|  |  ___| __ ___  ___/ ___\\ \\      / /_ _|_   _/ ___| | | |  |\n"
+	// 		"|  | |_ | '__/ _ \\/ _ \\___ \\\\ \\ /\\ / / | |  | || |   | |_| |  |\n"
+	......
+	
+	/*create@suy:2020-9-26*/
+	return ("");
+	/*create@suy end*/
+	......
+```
+* src\switch.c 第521行：去掉自动开启NAT功能
+```c
+	......
+	/*delete@suy:2020-9-29*/
+	// switch_core_flag_t flags = SCF_USE_SQL | SCF_USE_AUTO_NAT | SCF_USE_NAT_MAPPING | SCF_CALIBRATE_CLOCK | SCF_USE_CLOCK_RT;
+	/*delete@suy end*/
 
-[SignalWire](https://signalwire.com) is the primary sponsor of the FreeSWITCH project and was founded by the original developers of FreeSWITCH. SignalWire provides scalable services to enhance and scale your project such as SMS, SIP, Serverless Application hosting as well as programmable telecom. mod_signalwire which is distributed in this code base allows you to instantly pair with SignalWire and extend your FreeSWITCH.
+	/*create@suy:2020-9-29*/
+	switch_core_flag_t flags = SCF_USE_SQL | SCF_USE_NAT_MAPPING | SCF_CALIBRATE_CLOCK | SCF_USE_CLOCK_RT;
+	/*create@suy end*/
+	......
+```
+* src\include\cc.h 第1行：去掉了freeswitch的启动logo
+```c
+/*delete@suy:2020-9-26*/
 
-## Documentation
+// const char *cc = ".=======================================================================================================.\n"
+//                  "|       _                            _    ____ _             ____                                       |\n"
+//                  "|      / \\   _ __  _ __  _   _  __ _| |  / ___| |_   _  ___ / ___|___  _ __                             |\n"
+//                  "|     / _ \\ | '_ \\| '_ \\| | | |/ _` | | | |   | | | | |/ _ \\ |   / _ \\| '_ \\                            |\n"
+......
 
-The main index for documentation is available at:
+/*create@suy:2020-9-26*/
+const char *cc = "";
+const char *cc_s = "";
+/*create@suy end*/
+......
+```
+* src\mod\applications\mod_signalwire\mod_signalwire.c 第478行：去掉了signalwire的logo以及网站信息
+```c
+			/*delete@suy:2020-9-26*/
 
-  * https://freeswitch.org/confluence/
+			// if (globals.adoption_token[0]) {
+			// 	stream->write_function(stream,
+			// 		"     _____ _                   ___       ___\n"
+			// 		"    / ___/(_)___ _____  ____ _/ / |     / (_)_______\n"
+			......
+			
+			/*create@suy:2020-9-26*/
+			if (globals.adoption_token[0]) {
+				stream->write_function(stream, "");
+			} else {
+				stream->write_function(stream, "-ERR connection token not available\n");
+			}
+			/*create@suy end*/
+			......
+```
+* src\mod\applications\mod_signalwire\mod_signalwire.c 第983行：去掉了freeswitch的启动时signalwire的logo
+```c
+	......
+	/*delete@suy:2020-9-26*/
 
-### Release notes: 
+	// switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CONSOLE, "Welcome to\n"
+	// "     _____ _                   ___       ___\n"
+	// "    / ___/(_)___ _____  ____ _/ / |     / (_)_______\n"
+	// "    \\__ \\/ / __ `/ __ \\/ __ `/ /| | /| / / / ___/ _ \\\n"
+	......
+```
 
-  * https://freeswitch.org/confluence/display/FREESWITCH/Release+Notes 
+### 更改默认配置
 
-### Installation
-
-Step by step tutorials to install FreeSWITCH from packages or source code are available at:
-
-  * [Debian 10 Buster](https://freeswitch.org/confluence/display/FREESWITCH/Debian+10+Buster) [<b>Recommended</b>]
-  * [Raspberry Pi](https://freeswitch.org/confluence/display/FREESWITCH/Raspberry+Pi)
-  * [CentOS 7](https://freeswitch.org/confluence/display/FREESWITCH/CentOS+7+and+RHEL+7)
-
-## Downloads
-
-  * [Tarballs](https://files.freeswitch.org/releases/freeswitch/)
-  * [Windows Installer](http://files.freeswitch.org/windows/installer/x64/)
-  * [Windows Sound Packages](http://files.freeswitch.org/windows/installer/x64/sounds/)
-
-## Contributions
-
-GitHub pull requests are the recommended way to contribute to the FreeSWITCH source code:
-
-  * https://github.com/signalwire/freeswitch/pulls
-
-## Community
-
-Slack is our chat system where the developers, the FreeSWITCH team, and the most active users are present.
-This is the place to get answers faster and chat with other users in real time. All you need to do is enter your email and verify it on the Slack signup page and you are ready to join in the discussion!
-
-Slack Community:
-  * https://signalwire.community/
-
-Mailing list:
-
-  * http://lists.freeswitch.org/mailman/listinfo/freeswitch-users
-
-**Thank you for using FreeSWITCH!**
+* conf\vanilla\vars.xml 第301行：将external_rtp_ip从stun:stun.freeswitch.org改为$${local_ip_v4} 
+```xml
+	......
+	<!-- change@suy:2020-9-26 -->
+	<X-PRE-PROCESS cmd="set" data="external_rtp_ip=$${local_ip_v4}"/>
+	<!-- change@suy end -->
+	......
+```
+* conf\vanilla\vars.xml 第318行：将external_sip_ip从stun:stun.freeswitch.org改为$${local_ip_v4}
+```xml
+	......
+	<!-- change@suy:2020-9-26 -->
+	<X-PRE-PROCESS cmd="set" data="external_sip_ip=$${local_ip_v4}"/>
+	<!-- change@suy end -->
+	......
+```
+* conf\vanilla\autoload_configs\modules.conf.xml 第53行：启动时不加载mod_signalwire模块
+```xml
+	......
+    <!-- delete@suy:2020-9-28 -->
+    <!-- <load module="mod_signalwire"/> -->
+    <!-- delete end -->
+    ......
+```
+* conf\vanilla\dialplan\default.xml 第136行：取消默认密码呼叫时的10秒延时
+```xml
+	......
+	<!-- delete@suy:2020-9-30 -->
+	<!-- <action application="sleep" data="10000"/> -->
+	<!-- delete@suy end -->
+	......
+```
+* conf\vanilla\sip_profiles\internal.xml 第233行：设置默认媒体绕过
+```xml
+	......
+	<!-- recovery@suy:2020-9-30 -->
+	<param name="inbound-bypass-media" value="true"/>
+	<!-- recovery@suy end -->
+	......
+```
