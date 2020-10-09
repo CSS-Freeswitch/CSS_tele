@@ -116,6 +116,7 @@ const char *cc_s = "";
 ```
 * src\mod\applications\mod_signalwire\mod_signalwire.c 第478行：去掉了signalwire的logo以及网站信息
 ```c
+			......
 			/*delete@suy:2020-9-26*/
 
 			// if (globals.adoption_token[0]) {
@@ -166,10 +167,10 @@ const char *cc_s = "";
 * conf\vanilla\autoload_configs\modules.conf.xml 第53行：启动时不加载mod_signalwire模块
 ```xml
 	......
-    <!-- delete@suy:2020-9-28 -->
-    <!-- <load module="mod_signalwire"/> -->
-    <!-- delete end -->
-    ......
+	<!-- delete@suy:2020-9-28 -->
+	<!-- <load module="mod_signalwire"/> -->
+	<!-- delete end -->
+	......
 ```
 * conf\vanilla\dialplan\default.xml 第136行：取消默认密码呼叫时的10秒延时
 ```xml
