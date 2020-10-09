@@ -4,7 +4,7 @@
 
 * build\Makefile.am 第4行：去掉安装时的freeswitch提示信息
 
-```yaml
+```bash
 	......
 	## delete@suy:2020-9-27
 	## 
@@ -21,7 +21,7 @@
 	......
 ```
 * build\Makefile.am 第33行：去掉安装时的freeswitch提示信息
-```yaml
+```bash
 	......
 	## delete@suy:2020-9-27
 	## 
