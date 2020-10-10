@@ -677,6 +677,11 @@ static switch_status_t sofia_acknowledge_call(switch_core_session_t *session)
 	return SWITCH_STATUS_FALSE;
 }
 
+/**
+ * anno@suy:2020-10-9 #21.3.2.6.6
+ * 
+ * 摘自《FreeSWITCH权威指南》：
+ */
 static switch_status_t sofia_answer_channel(switch_core_session_t *session)
 {
 	private_object_t *tech_pvt = (private_object_t *) switch_core_session_get_private(session);
@@ -805,6 +810,7 @@ static switch_status_t sofia_answer_channel(switch_core_session_t *session)
 
 				if (sofia_use_soa(tech_pvt)) {
 
+					//-> 可很容易想到，应答将会向对方发送SIP 200 OK消息。而它就是调用Sofia-SIP底层库实现的。
 					nua_respond(tech_pvt->nh, SIP_200_OK,
 								TAG_IF(is_proxy, NUTAG_AUTOANSWER(0)),
 								SIPTAG_CONTACT_STR(tech_pvt->profile->url),
@@ -1000,6 +1006,15 @@ static switch_status_t sofia_answer_channel(switch_core_session_t *session)
 
 	return SWITCH_STATUS_SUCCESS;
 }
+/**
+ * 如果我们再回到21.1.2节的answer App，就可以看到它调用了核心的switch_answer_channel函数，并在switch_channel.c中
+ * 发送了一个SWITCH_MESSAGE_INDICATE_ANSWER消息，因而sofia_receive_message函数被回调，最终在此函数向对方的SIP终端
+ * 发送200 OK消息。
+ * 
+ * 至此，我们所有的呼叫流程就全部都串起来了，我们对源代码的分析也就到此结束了
+ * 
+ * anno@suy end
+ */
 
 static switch_status_t sofia_read_text_frame(switch_core_session_t *session, switch_frame_t **frame, switch_io_flag_t flags, int stream_id)
 {
@@ -1141,6 +1156,15 @@ static switch_status_t sofia_write_video_frame(switch_core_session_t *session, s
 	return SWITCH_STATUS_FALSE;
 }
 
+/**
+ * anno@suy:2020-10-9 #21.3.2.6.3
+ * 
+ * 摘自《FreeSWITCH权威指南》：
+ * 
+ * 当代码中某处调用switch_core_session_read_frame试图读取一帧音频数据是（如21.1.4节中的情况），就会执行read_frame回调函数
+ * 因而会回调下面定义的函数。该回调函数由于将大部分功能都移动到核心的Core Media代码中去了，因而非常简单，他主要就是调用核心的
+ * switch_core_media_read_frame从底层的RTP中读取音频数据。
+ */
 static switch_status_t sofia_read_frame(switch_core_session_t *session, switch_frame_t **frame, switch_io_flag_t flags, int stream_id)
 {
 	private_object_t *tech_pvt = switch_core_session_get_private(session);
@@ -1167,13 +1191,23 @@ static switch_status_t sofia_read_frame(switch_core_session_t *session, switch_f
 		return SWITCH_STATUS_FALSE;
 	}
 
+	//-> 调用核心的switch_core_media_read_frame从底层的RTP中读取音频数据。#->21.3.2.6.4
 	status = switch_core_media_read_frame(session, frame, flags, stream_id, SWITCH_MEDIA_TYPE_AUDIO);
 
 	sofia_clear_flag_locked(tech_pvt, TFLAG_READING);
 
 	return status;
 }
+/*anno@suy end*/
 
+/**
+ * anno@suy:2020-10-9 #21.3.2.6.4
+ * 
+ * 摘自《FreeSWITCH权威指南》：
+ * 
+ * 当然，写数据的情况与此差不多，write_frame回调函数在下面定义。也是调用了Core Media中的函数switch_core_media_write_frame
+ * 通过RTP将音频数据发送出去。
+ */
 static switch_status_t sofia_write_frame(switch_core_session_t *session, switch_frame_t *frame, switch_io_flag_t flags, int stream_id)
 {
 	private_object_t *tech_pvt = switch_core_session_get_private(session);
@@ -1223,6 +1257,7 @@ static switch_status_t sofia_write_frame(switch_core_session_t *session, switch_
 
 	sofia_set_flag_locked(tech_pvt, TFLAG_WRITING);
 
+	//-> 调用了Core Media中的函数switch_core_media_write_frame通过RTP将音频数据发送出去。#->21.3.2.6.5
 	if (switch_core_media_write_frame(session, frame, flags, stream_id, SWITCH_MEDIA_TYPE_AUDIO)) {
 		status = SWITCH_STATUS_SUCCESS;
 	}
@@ -1230,6 +1265,7 @@ static switch_status_t sofia_write_frame(switch_core_session_t *session, switch_
 	sofia_clear_flag_locked(tech_pvt, TFLAG_WRITING);
 	return status;
 }
+/*anno@suy end*/
 
 static switch_status_t sofia_kill_channel(switch_core_session_t *session, int sig)
 {
@@ -1313,6 +1349,14 @@ static switch_status_t sofia_send_dtmf(switch_core_session_t *session, const swi
 	return SWITCH_STATUS_SUCCESS;
 }
 
+/**
+ * anno@suy:2020-10-9 #21.3.2.6.5
+ * 
+ * 摘自《FreeSWITCH权威指南》：
+ * 
+ * 视频的回调函数read_video_frame和write_video_frame与此差不多。我们就不多讲了。最后，还有一个比较有意思的
+ * receive_message回调。
+ */
 static switch_status_t sofia_receive_message(switch_core_session_t *session, switch_core_session_message_t *msg)
 {
 	switch_channel_t *channel = switch_core_session_get_channel(session);
@@ -1346,6 +1390,7 @@ static switch_status_t sofia_receive_message(switch_core_session_t *session, swi
 	}
 
 	/* ones that do not need to lock sofia mutex */
+	//-> 判断收到的各种消息，并进行相应的处理。
 	switch (msg->message_id) {
 	case SWITCH_MESSAGE_INDICATE_KEEPALIVE:
 		{
@@ -1513,6 +1558,7 @@ static switch_status_t sofia_receive_message(switch_core_session_t *session, swi
 		goto end_lock;
 	}
 
+	//-> 判断收到的各种消息，并进行相应的处理。
 	switch (msg->message_id) {
 
 	case SWITCH_MESSAGE_INDICATE_DEFLECT: {
@@ -2499,6 +2545,7 @@ static switch_status_t sofia_receive_message(switch_core_session_t *session, swi
 			}
 		}
 		break;
+	//-> 在收到SWITCH_MESSAGE_INDICATE_ANSWER消息时，它将调用sofia_answer_channel对当前通话进行应答。#->21.3.2.6.6
 	case SWITCH_MESSAGE_INDICATE_ANSWER:
 		status = sofia_answer_channel(session);
 		break;
@@ -2702,6 +2749,7 @@ static switch_status_t sofia_receive_message(switch_core_session_t *session, swi
 	return status;
 
 }
+/*anno@suy end*/
 
 static switch_status_t sofia_receive_event(switch_core_session_t *session, switch_event_t *event)
 {
@@ -4602,6 +4650,15 @@ SWITCH_STANDARD_API(sofia_function)
 	return status;
 }
 
+/**
+ * anno@suy:2020-10-9 #21.3.2.6.1
+ * 
+ * 摘自《FreeSWITCH权威指南》：
+ * 
+ * 与Channel状态机回调相比，Endpoint模块中更重要的是IO例程的回调。IO例程主要提供媒体数据的输入输出（IO）功能。与上一节
+ * 讲的Channel的状态机类似，IO例程的回调函数是在21.3.1节讲到的代码注册到核心中去的。其中，IO例程的回调函数是由一个
+ * switch_io_routines_t类型的结构体变量设置的，该变量定义如下
+ */
 switch_io_routines_t sofia_io_routines = {
 	/*.outgoing_channel */ sofia_outgoing_channel,
 	/*.read_frame */ sofia_read_frame,
@@ -4618,7 +4675,21 @@ switch_io_routines_t sofia_io_routines = {
 	/*.state_run*/ NULL,
 	/*.get_jb*/ sofia_get_jb
 };
+/**
+ * 在21.1.5节，我们已经讲过了outgoing_channel的回调，该回调是在有外呼请求的时候（如，执行“originate sofia/gateway/..”时）
+ * 被回调执行的。在此我们来看一下mod_sofia中的outgoing_channel有何不同。#->21.3.2.6.2
+ * 
+ * anno@suy end
+ */
 
+/**
+ * anno@suy:2020-10-9 #21.3.2.5.1
+ * 
+ * 摘自《FreeSWITCH权威指南》：
+ * 
+ * 当然，这里说的是“基本”而绝不是“绝对”。一般来说，还是要在Endpoint模块中跟踪Channel状态机的变化，这就需要在核心
+ * 状态机上注册相应的回调函数实现，如Sofia Channel的状态机的回调是在下面定义的。
+ */
 switch_state_handler_table_t sofia_event_handlers = {
 	/*.on_init */ sofia_on_init,
 	/*.on_routing */ sofia_on_routing,
@@ -4633,6 +4704,12 @@ switch_state_handler_table_t sofia_event_handlers = {
 	/*.on_reporting */ NULL,
 	/*.on_destroy */ sofia_on_destroy
 };
+/**
+ * 这些回调函数是在21.3.1节讲过的代码中注册到核心中去的。回调函数本身都比较简单，感兴趣的读者可以自己看一下代码。
+ * 为了节省篇幅，在此我们就不多列举了。#->21.3.2.6.1
+ * 
+ * anno@suy end
+ */
 
 static switch_status_t sofia_manage(char *relative_oid, switch_management_action_t action, char *data, switch_size_t datalen)
 {
@@ -4695,6 +4772,13 @@ static int protect_dest_uri(switch_caller_profile_t *cp)
 	return mod;
 }
 
+/**
+ * anno@suy:2020-10-9 #21.3.2.6.2
+ * 
+ * 摘自《FreeSWITCH权威指南》：
+ * 
+ * 该模块的outgoing_channel回调是在下面定义的
+ */
 static switch_call_cause_t sofia_outgoing_channel(switch_core_session_t *session, switch_event_t *var_event,
 												  switch_caller_profile_t *outbound_profile, switch_core_session_t **new_session,
 												  switch_memory_pool_t **pool, switch_originate_flag_t flags, switch_call_cause_t *cancel_cause)
@@ -4725,22 +4809,27 @@ static switch_call_cause_t sofia_outgoing_channel(switch_core_session_t *session
 		mod = protect_dest_uri(outbound_profile);
 	}
 
+	//-> 初始化了一个新的Session(nsession)
 	if (!(nsession = switch_core_session_request_uuid(sofia_endpoint_interface, SWITCH_CALL_DIRECTION_OUTBOUND,
 													  flags, pool, switch_event_get_header(var_event, "origination_uuid")))) {
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Error Creating Session\n");
 		goto error;
 	}
 
+	//-> 初始化了一个新的tech_pvt用于存放私有数据
 	tech_pvt = sofia_glue_new_pvt(nsession);
 
+	//-> 从outbound_profile中复制被叫号码
 	data = switch_core_session_strdup(nsession, outbound_profile->destination_number);
 	if ((dest_to = strchr(data, '^'))) {
 		*dest_to++ = '\0';
 	}
 	profile_name = data;
 
+	//-> 得到对应的Channel(nchannel)。
 	nchannel = switch_core_session_get_channel(nsession);
 
+	//-> 如果该外呼是由bridge发起的，则还会有a-leg存在，因而将得到与a-leg对应的Channel，我们新生成的nchannel即是b-leg
 	if (session) {
 		o_channel = switch_core_session_get_channel(session);
 	}
@@ -5002,7 +5091,7 @@ static switch_call_cause_t sofia_outgoing_channel(switch_core_session_t *session
 		switch_core_session_set_ice(nsession);
 	}
 
-
+	//-> 将tech_pvt与nsession关联进来。
 	sofia_glue_attach_private(nsession, profile, tech_pvt, dest);
 
 	if (tech_pvt->local_url) {
@@ -5085,6 +5174,11 @@ static switch_call_cause_t sofia_outgoing_channel(switch_core_session_t *session
 
 	sofia_set_flag_locked(tech_pvt, TFLAG_OUTBOUND);
 	sofia_clear_flag_locked(tech_pvt, TFLAG_LATE_NEGOTIATION);
+	/*-> 
+	 * 下面可以看出，新的Channel nchannel的状态变为了CS_INIT。然后，该Channel便进入正常呼叫流程了。接下来，核心的状态机
+	 * 会接管后面的状态变化，如将状态机置为CS_ROUTING，然后进行路由查找（即查找Dialplan），最后进入CS_EXECUTE状态，执行
+	 * 在Dialplan中找到的各种APP等。#->21.3.2.6.3
+	 */
 	if (switch_channel_get_state(nchannel) == CS_NEW) {
 		switch_channel_set_state(nchannel, CS_INIT);
 	}
@@ -5203,6 +5297,7 @@ static switch_call_cause_t sofia_outgoing_channel(switch_core_session_t *session
 	}
 	return cause;
 }
+/*anno@suy end*/
 
 static int notify_csta_callback(void *pArg, int argc, char **argv, char **columnNames)
 {
@@ -6097,7 +6192,7 @@ SWITCH_STANDARD_APP(sofia_sla_function)
 }
 
 /**
- * anno@suy:2020-10-8 #20.3.1.1
+ * anno@suy:2020-10-8 #21.3.1.1
  * 
  * 摘自《FreeSWITCH权威指南》：
  */
@@ -6360,7 +6455,7 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_sofia_load)
 	/*->
 	 * 后面的代码还有很多，我们就不继续往下看到了。至此，我们还有两个细节没有研究明白：第一，就是上面刚刚讲到的这些回调函数
 	 * 都是怎么使用的；第二，就是底层的Sofia库是在哪里启动的，又是如何接收SIP消息并建立通话的。为了从根本上了解一路通话的建
-	 * 立过程，这次我们先从第二个问题开始看。#->20.3.2.1.1
+	 * 立过程，这次我们先从第二个问题开始看。#->21.3.2.1.1
 	 */
 
 	management_interface = switch_loadable_module_create_interface(*module_interface, SWITCH_MANAGEMENT_INTERFACE);

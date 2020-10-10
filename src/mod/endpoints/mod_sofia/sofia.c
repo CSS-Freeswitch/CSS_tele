@@ -1483,6 +1483,13 @@ static void sofia_handle_sip_r_refer(nua_t *nua, sofia_profile_t *profile, nua_h
 
 
 //sofia_dispatch_event_t *de
+/**
+ * anno@suy:2020-10-9 #21.3.2.3.4
+ * 
+ * 摘自《FreeSWITCH权威指南》：
+ * 
+ * 继续往下跟踪可以确定我们的猜测，在下面找到our_sofia_event_callback的定义后，可以看到它确实是在处理SIP消息了。
+ */
 static void our_sofia_event_callback(nua_event_t event,
 						  int status,
 						  char const *phrase,
@@ -1645,6 +1652,10 @@ static void our_sofia_event_callback(nua_event_t event,
 		}
 	}
 
+	/*-> 
+	 * 在下面的switch语句的各个分支中，我们可以看到许多nua_r_和nua_i_开头的SIP event，其中，前者表示收到一条响应（Response）消息，
+	 * 而后者表示收到一条请求消息
+	 */
 	switch (event) {
 	case nua_r_get_params:
 	case nua_i_fork:
@@ -1808,15 +1819,22 @@ static void our_sofia_event_callback(nua_event_t event,
 	case nua_i_options:
 		sofia_handle_sip_i_options(status, phrase, nua, profile, nh, sofia_private, sip, de, tags);
 		break;
+	//-> 我们集中精力看INVITE消息，如果收到INVITE消息，则下面一行的case条件成立。
 	case nua_i_invite:
 		if (session && sofia_private) {
+			//-> 如果下面的条件成立，则说明是一个re-INVITE消息，则在下面第二行进行处理
 			if (sofia_private->is_call > 1) {
 				sofia_handle_sip_i_reinvite(session, nua, profile, nh, sofia_private, sip, de, tags);
 			} else {
 				sofia_private->is_call++;
+				//-> 否则说明是一个新的INVITE消息，调用sofia_handle_sip_i_invite处理
 				sofia_handle_sip_i_invite(session, nua, profile, nh, sofia_private, sip, de, tags);
 			}
 		}
+		/*->
+		 * 在sofia_handle_sip_i_invite中，将更深入解析INVITE消息，对Session的相关内容进行更新，如果需要对来话进行认证，还需要
+		 * 给对方发送SIP 407消息进行挑战认证等。有兴趣的读者可以找到它来研究一下，在此我们就不再深入了。
+		 */
 		break;
 	case nua_i_publish:
 		sofia_presence_handle_sip_i_publish(nua, profile, nh, sofia_private, sip, de, tags);
@@ -1826,6 +1844,12 @@ static void our_sofia_event_callback(nua_event_t event,
 		//nua_handle_destroy(nh);
 		sofia_reg_handle_sip_i_register(nua, profile, nh, &sofia_private, sip, de, tags);
 		break;
+		/*-> 
+		 * 在Sofia-SIP底层，也实现了一个状态机，在SIP通话的不同阶段使用不同的状态进行表示和处理。因而在SIP状态发生改变时，它便向
+		 * 上层上报状态变化事件，这些状态变化事件也是在SIP事件的形式上报的，因而会经过跟上述的INVITE消息类似的回调过程一直到回调
+		 * 同一个回调函数our_sofia_event_callback。在下面的代码中我们会看到在收到Sofia-SIP底层驱动的状态变化后，继续回调
+		 * sofia_handle_sip_i_state函数来进行相关处理。#->21.3.2.4.1
+		 */
 	case nua_i_state:
 		sofia_handle_sip_i_state(session, status, phrase, nua, profile, nh, sofia_private, sip, de, tags);
 		break;
@@ -2210,6 +2234,7 @@ static void our_sofia_event_callback(nua_event_t event,
 		switch_core_session_rwunlock(session);
 	}
 }
+/*anno@suy end*/
 
 static uint32_t DE_THREAD_CNT = 0;
 
@@ -2258,6 +2283,13 @@ void sofia_process_dispatch_event_in_thread(sofia_dispatch_event_t **dep)
 	switch_thread_pool_launch_thread(&td);
 }
 
+/**
+ * anno@suy:2020-10-9 #21.3.2.3.3
+ * 
+ * 摘自《FreeSWITCH权威指南》：
+ * 
+ * 看来还得继续跟踪，sofia_process_dispatch_event在下面定义。
+ */
 void sofia_process_dispatch_event(sofia_dispatch_event_t **dep)
 {
 	sofia_dispatch_event_t *de = *dep;
@@ -2267,6 +2299,7 @@ void sofia_process_dispatch_event(sofia_dispatch_event_t **dep)
 	sofia_private_t *sofia_private = nua_handle_magic(de->nh);
 	*dep = NULL;
 
+	//-> 当看到下面的代码时，我们总算看到了一点曙光，它终于像在调用一个回调函数了。#->21.3.2.3.4
 	our_sofia_event_callback(de->data->e_event, de->data->e_status, de->data->e_phrase, de->nua, de->profile,
 							 de->nh, sofia_private, de->sip, de, (tagi_t *) de->data->e_tags);
 
@@ -2280,12 +2313,20 @@ void sofia_process_dispatch_event(sofia_dispatch_event_t **dep)
 	nua_handle_unref(nh);
 	nua_unref(nua);
 }
+/*anno@suy end*/
 
 
 
 static int msg_queue_threads = 0;
 //static int count = 0;
 
+/**
+ * anno@suy:2020-10-9 #21.3.2.3.2
+ * 
+ * 摘自《FreeSWITCH权威指南》：
+ * 
+ * 我们继续跟踪，就发现sofia_msg_thread_run是在下面定义的。
+ */
 void *SWITCH_THREAD_FUNC sofia_msg_thread_run(switch_thread_t *thread, void *obj)
 {
 	void *pop;
@@ -2306,6 +2347,7 @@ void *SWITCH_THREAD_FUNC sofia_msg_thread_run(switch_thread_t *thread, void *obj
 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "MSG Thread %d Started\n", my_id);
 
 
+	//-> 这里使用一个无限循环，不断地从消息队列中取出一条消息（事件）
 	for(;;) {
 
 		if (switch_queue_pop(q, &pop) != SWITCH_STATUS_SUCCESS) {
@@ -2315,6 +2357,7 @@ void *SWITCH_THREAD_FUNC sofia_msg_thread_run(switch_thread_t *thread, void *obj
 
 		if (pop) {
 			sofia_dispatch_event_t *de = (sofia_dispatch_event_t *) pop;
+			//-> 然后在下面一行使用sofia_process_dispatch_event函数发送出去。#->21.3.2.3.3
 			sofia_process_dispatch_event(&de);
 		} else {
 			break;
@@ -2329,7 +2372,16 @@ void *SWITCH_THREAD_FUNC sofia_msg_thread_run(switch_thread_t *thread, void *obj
 
 	return NULL;
 }
+/*anno@suy end*/
 
+/**
+ * anno@suy:2020-10-9 #21.3.2.3.1
+ * 
+ * 摘自《FreeSWITCH权威指南》：
+ * 
+ * 对SIP事件的处理是在单独的线程（组）中执行的。进行时间处理的线程实在模块加载时从sofia_msg_thread_start函数开始的。
+ * 该函数定义如下，它首先会启动一个新线程，并在以后根据CPU的数量以及当前的需要决定启动多少个消息处理线程。
+ */
 void sofia_msg_thread_start(int idx)
 {
 
@@ -2351,6 +2403,7 @@ void sofia_msg_thread_start(int idx)
 				switch_threadattr_create(&thd_attr, mod_sofia_globals.pool);
 				switch_threadattr_stacksize_set(thd_attr, SWITCH_THREAD_STACKSIZE);
 				//switch_threadattr_priority_set(thd_attr, SWITCH_PRI_REALTIME);
+				//-> 下面的代码可以看出，新的事件处理线程中将执行sofia_msg_thread_run函数。#->21.3.2.3.2
 				switch_thread_create(&mod_sofia_globals.msg_queue_thread[i],
 									 thd_attr,
 									 sofia_msg_thread_run,
@@ -2362,10 +2415,11 @@ void sofia_msg_thread_start(int idx)
 
 	switch_mutex_unlock(mod_sofia_globals.mutex);
 }
+/*anno@suy end*/
 
 //static int foo = 0;
 /**
- * anno@suy:2020-10-8 #20.3.2.2.2
+ * anno@suy:2020-10-8 #21.3.2.2.2
  * 
  * 摘自《FreeSWITCH权威指南》：
  * 
@@ -2403,7 +2457,7 @@ void sofia_queue_message(sofia_dispatch_event_t *de)
 	switch_queue_push(mod_sofia_globals.msg_queue, de);
 }
 /**
- * 至此，SIP事件的接收就完成了。如果后续收到其他SIP事件，将进行下次回调，并推到队列中等候处理。
+ * 至此，SIP事件的接收就完成了。如果后续收到其他SIP事件，将进行下次回调，并推到队列中等候处理。#->21.3.2.3.1
  * 
  * anno@suy end
  */
@@ -2418,7 +2472,7 @@ static void set_call_id(private_object_t *tech_pvt, sip_t const *sip)
 
 
 /**
- * anno@suy:2020-10-8 #20.3.2.2.1
+ * anno@suy:2020-10-8 #21.3.2.2.1
  * 
  * 摘自《FreeSWITCH权威指南》：
  * 
@@ -2689,7 +2743,7 @@ void sofia_event_callback(nua_event_t event,
 	 * sofia_dispatch_event_t的结构体指针，它包含了本次收到的SIP消息）
 	 */
 	sofia_queue_message(de);
-	//-> Sofia-SIP库在底层是一个单线程的结构，因此在这里我们使用了消息队列以提高并发量。#->20.3.2.2.2
+	//-> Sofia-SIP库在底层是一个单线程的结构，因此在这里我们使用了消息队列以提高并发量。#->21.3.2.2.2
 
  end:
 	//switch_cond_next();
@@ -3172,7 +3226,7 @@ switch_thread_t *launch_sofia_worker_thread(sofia_profile_t *profile)
 }
 
 /**
- * anno@suy:2020-10-8 #20.3.2.1.3
+ * anno@suy:2020-10-8 #21.3.2.1.3
  * 
  * 摘自《FreeSWITCH权威指南》：
  */
@@ -3303,7 +3357,7 @@ void *SWITCH_THREAD_FUNC sofia_profile_thread_run(switch_thread_t *thread, void 
 								  TAG_IF(sofia_test_pflag(profile, PFLAG_NO_CONNECTION_REUSE),
 										 TPTAG_REUSE(0)),
 								  TAG_END());	/* Last tag should always finish the sequence */
-		//-> 关于Sofia-SIP底层的库我们就不深入研究了。到此为止，我们的SIP服务已经启动了，就等着接收SIP消息了。#->20.3.2.2.1
+		//-> 关于Sofia-SIP底层的库我们就不深入研究了。到此为止，我们的SIP服务已经启动了，就等着接收SIP消息了。#->21.3.2.2.1
 
 		if (!profile->nua) {
 			switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Error Creating SIP UA for profile: %s (%s) ATTEMPT %d (RETRY IN %d SEC)\n",
@@ -3598,7 +3652,7 @@ void sofia_profile_destroy(sofia_profile_t *profile)
 }
 
 /**
- * anno@suy:2020-10-8 #20.3.2.1.2
+ * anno@suy:2020-10-8 #21.3.2.1.2
  * 
  * 摘自《FreeSWITCH权威指南》：
  */
@@ -4450,7 +4504,7 @@ done:
 }
 
 /**
- * anno@suy:2020-10-8 #20.3.2.1.1
+ * anno@suy:2020-10-8 #21.3.2.1.1
  * 
  * 摘自《FreeSWITCH权威指南》：
  * 
@@ -6256,7 +6310,7 @@ switch_status_t config_sofia(sofia_config_t reload, char *profile_name)
 						switch_event_t *s_event;
 						if (!profile->extsipport) profile->extsipport = profile->sip_port;
 
-						//-> 启动相关的Profile #->20.3.2.1.2
+						//-> 启动相关的Profile #->21.3.2.1.2
 						launch_sofia_profile_thread(profile);
 						if (profile->odbc_dsn) {
 							switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "Connecting ODBC Profile %s [%s]\n", profile->name, url);
@@ -7275,6 +7329,23 @@ static void mark_transfer_record(switch_core_session_t *session, const char *br_
 }
 
 
+/**
+ * anno@suy:2020-10-9 #21.3.2.4.1
+ * 
+ * 摘自《FreeSWITCH权威指南》：
+ * 
+ * 由于sofia_handle_sip_i_state函数有太多的状态和情况需要处理，因此也非常长。我们很难通过直接阅读源码的方式找到正确的入口。
+ * 看起来，虽然我们的代码剖析到最后了，但是竟然可能要迷失了。
+ * 
+ * 不过，办法总比困难多。在本章中，我们过多地关注了理论却少了实践。下面让我们拿起一个SIP电话，拨打9196，很快就可以在日志中
+ * 看到如下的信息：
+ *     [DEBUG] sofia.c: ... Channel entering state [received][100]
+ * 从上一条日志可以看出，在第...行打印了一条日志，表示我们的状态机进入了收到INVITE消息后发送100 Trying消息的阶段（代码略）。
+ * 而接着下一条日志则告诉我们Channel的状态从CS_NEW变成了CS_INIT。
+ *     [DEBUG] sofia.c: ... State Change CS_NEW -> CS_INIT
+ * 
+ * 有了上述信息，我们就可以很快找到该日志对应的代码了。
+ */
 static void sofia_handle_sip_i_state(switch_core_session_t *session, int status,
 									 char const *phrase,
 									 nua_t *nua, sofia_profile_t *profile, nua_handle_t *nh, sofia_private_t *sofia_private, sip_t const *sip,
@@ -7792,9 +7863,15 @@ static void sofia_handle_sip_i_state(switch_core_session_t *session, int status,
 				if (switch_channel_test_flag(channel, CF_PROXY_MODE)) {
 					switch_channel_set_variable(channel, SWITCH_ENDPOINT_DISPOSITION_VARIABLE, "RECEIVED_NOMEDIA");
 					sofia_set_flag_locked(tech_pvt, TFLAG_READY);
+					//-> 只要满足一定的条件，下面一行就会把Channel的状态变为CS_INIT，然后Channel的核心状态机就会回调相关的状态回调函数了，
 					if (switch_channel_get_state(channel) == CS_NEW) {
 						switch_channel_set_state(channel, CS_INIT);
 					}
+					/*->
+					 * 只要Channel的状态一变成CS_INIT，FreeSWITCH核心的状态机代码就会负责处理各种状态变化了，因而各Endpoint模块就不需要
+					 * 再自己维护状态机了。也就是说，在一个Endpoint模块，首先要有一定的机制用于初始化一个Session（对应一个Channel，它的
+					 * 初始化状态将为CS_NEW），然后在适当的时候把该Channel的状态变成CS_INIT，剩下的事就基本不用管了。#->21.3.2.5.1
+					 */
 					sofia_set_flag(tech_pvt, TFLAG_SDP);
 					goto done;
 				} else if (switch_channel_test_flag(tech_pvt->channel, CF_PROXY_MEDIA)) {
@@ -8658,6 +8735,7 @@ static void sofia_handle_sip_i_state(switch_core_session_t *session, int status,
 
 	return;
 }
+/*anno@suy end*/
 
 typedef struct {
 	char *exten;

@@ -391,7 +391,7 @@ SWITCH_MOD_DECLARE(switch_status_t) switch_module_shutdown(void);
 	}
 
 /**
- * anno@suy:2020-10-8 #20.1.1.3
+ * anno@suy:2020-10-8 #21.1.1.3
  * 
  * 摘自《FreeSWITCH权威指南》：
  * 
@@ -432,7 +432,7 @@ SWITCH_MOD_DECLARE(switch_status_t) switch_module_shutdown(void);
  *     app_int->application_function = echo_function;
  * 
  * 因而，通过SWITCH_ADD_APP这个宏，相当于给系统核心添加了一个echo App，它对应源代码中的echo_function。这样每当系统执行到
- * Dialplan中的echo App时，便通过这里的对应关系找到相应的函数入口，进而执行echo_function函数。#->20.1.2.1
+ * Dialplan中的echo App时，便通过这里的对应关系找到相应的函数入口，进而执行echo_function函数。#->21.1.2.1
  * 
  * anno@suy end
  */

@@ -1389,7 +1389,7 @@ SWITCH_STANDARD_APP(set_name_function)
 }
 
 /**
- * anno@suy:2020-10-8 #20.1.2.1
+ * anno@suy:2020-10-8 #21.1.2.1
  * 
  * 摘自《FreeSWITCH权威指南》：
  * 
@@ -1425,7 +1425,7 @@ SWITCH_STANDARD_APP(answer_function)
  * 
  * switch_channel_answer函数实际上是一个宏，在此使用一个宏的作用就是往函数中传入调用者的源文件名和行号信息，以便在日志
  * 中打印的文件名和行号是实际上调用该函数处的文件名和行号，而不是该函数实际定义处的行号（否则没有什么实际意义）。该宏展开
- * 后实际是调用switch_channal.c中的switch_channel_perform_answer函数。#->20.1.2.2
+ * 后实际是调用switch_channal.c中的switch_channel_perform_answer函数。#->21.1.2.2
  * 
  * anno@suy end
  */
@@ -1655,7 +1655,7 @@ SWITCH_STANDARD_APP(sched_cancel_function)
 }
 
 /**
- * anno@suy:2020-10-8 #20.1.3.2
+ * anno@suy:2020-10-8 #21.1.3.2
  * 
  * 摘自《FreeSWITCH权威指南》：
  * 
@@ -1737,7 +1737,7 @@ static void base_set (switch_core_session_t *session, const char *data, switch_s
 }
 /**
  * 虽然这里们讲的比较啰嗦，但实际的过程还是非常简单的。我们接着看一看第$2行调用的switch_channel_expand_variables函数到底都干了
- * 些什么 #->20.1.3.3
+ * 些什么 #->21.1.3.3
  * 
  * anno@suy end
  */
@@ -1770,12 +1770,12 @@ SWITCH_STANDARD_APP(multiset_function)
 }
 
 /**
- * anno@suy:2020-10-8 #20.1.3.1
+ * anno@suy:2020-10-8 #21.1.3.1
  * 
  * 摘自《FreeSWITCH权威指南》：
  * 
  * FreeSWITCH中大量使用通道变量控制通话（Channel）的行为。设置通道变量的操作是由下面的set APP实现的。该函数出奇的简单，
- * 因为它直接调用了另外一个函数base_set。#->20.1.3.2
+ * 因为它直接调用了另外一个函数base_set。#->21.1.3.2
  */
 SWITCH_STANDARD_APP(set_function)
 {
@@ -2388,7 +2388,7 @@ SWITCH_STANDARD_APP(stop_fax_detect_session_function)
 }
 
 /**
- * anno@suy:2020-10-8 #20.1.1.1
+ * anno@suy:2020-10-8 #21.1.1.1
  * 
  * 摘自《FreeSWITCH权威指南》：
  * 
@@ -2420,7 +2420,7 @@ SWITCH_STANDARD_APP(echo_function)
  * echo-function函数就直接调用核心提供的switch_ivr_session_echo函数，将收到的RTP包原样发回去。
  * switch_ivr_session_echo函数我们在20.3.7节已经详细介绍了，这里就不重复了。
  * 
- * 至此，是不是觉得整个呼叫流程一下子就串起来了？当然，如果还是没有这种感觉，我们继续往下看。#->20.1.1.2
+ * 至此，是不是觉得整个呼叫流程一下子就串起来了？当然，如果还是没有这种感觉，我们继续往下看。#->21.1.1.2
  * 
  * anno@suy end
  */
@@ -6702,7 +6702,7 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_dptools_load)
 	SWITCH_ADD_APP(app_interface, "fax_detect", "Detect faxes", "Detect fax send tone", fax_detect_session_function, "", SAF_MEDIA_TAP);
 	SWITCH_ADD_APP(app_interface, "tone_detect", "Detect tones", "Detect tones", tone_detect_session_function, "", SAF_MEDIA_TAP);
 	/**
-	 * anno@suy:2020-10-8 #20.1.1.2
+	 * anno@suy:2020-10-8 #21.1.1.2
 	 * 
 	 * 摘自《FreeSWITCH权威指南》：
 	 * 
@@ -6710,7 +6710,7 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_dptools_load)
 	 */
 	SWITCH_ADD_APP(app_interface, "echo", "Echo", "Perform an echo test against the calling channel", echo_function, "", SAF_SUPPORT_TEXT_ONLY);
 	/**
-	 * 它的作用是将我们刚刚定义的echo_function加到app_interface里（即核心的Application Interface指针）。#->20.1.1.3
+	 * 它的作用是将我们刚刚定义的echo_function加到app_interface里（即核心的Application Interface指针）。#->21.1.1.3
 	 * 
 	 * anno@suy end
 	 */

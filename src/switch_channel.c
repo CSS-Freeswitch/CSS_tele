@@ -1493,7 +1493,7 @@ SWITCH_DECLARE(switch_status_t) switch_channel_set_variable_var_check(switch_cha
 
 
 /**
- * anno@suy:2020-10-8 #20.1.3.3
+ * anno@suy:2020-10-8 #21.1.3.3
  * 
  * 摘自《FreeSWITCH权威指南》：
  */
@@ -3894,7 +3894,7 @@ SWITCH_DECLARE(switch_status_t) switch_channel_perform_mark_answered(switch_chan
 }
 
 /**
- * anno@suy:2020-10-8 #20.1.2.2
+ * anno@suy:2020-10-8 #21.1.2.2
  * 
  * 摘自《FreeSWITCH权威指南》：
  */
@@ -3960,7 +3960,7 @@ SWITCH_DECLARE(switch_status_t) switch_channel_perform_answer(switch_channel_t *
 	return status;
 }
 /**
- * answer_function也是由SWITCH_ADD_APP宏安装到核心中去的。#->20.1.3.1
+ * answer_function也是由SWITCH_ADD_APP宏安装到核心中去的。#->21.1.3.1
  * 
  * anno@suy end
  */
